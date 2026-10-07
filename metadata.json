@@ -1,0 +1,6 @@
+{
+  "name": "InfraAsset IT - Sistema de Inventário e Gestão de Ativos",
+  "description": "Sistema completo de inventário de TI para computadores, notebooks e servidores Windows e Linux com agente de coleta automatizado.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
