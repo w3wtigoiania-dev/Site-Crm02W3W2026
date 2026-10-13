@@ -85,6 +85,31 @@ export interface AgentToken {
   created_at: string;
 }
 
+export interface AssistanceSlide {
+  id: string;
+  order_index: number;
+  ordem?: number;
+  focus: string; // 'Essencialidade' | 'Infraestrutura' | 'Complexidade' | 'Confiança' | 'Chamada para Ação'
+  foco?: string;
+  title: string;
+  titulo?: string;
+  description: string;
+  subtitle?: string;
+  subtitulo?: string;
+  image_url: string;
+  imagem?: string;
+  badge?: string;
+  cta_text?: string;
+  cta_link?: string;
+  is_active?: boolean;
+  ativo?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type CarouselSlide = AssistanceSlide;
+
+
 export interface SystemSettings {
   id?: string;
   company_name: string;
@@ -420,6 +445,36 @@ export async function initDatabase(): Promise<Database> {
       status TEXT DEFAULT 'Agendada',
       created_at TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS assistance_slides (
+      id TEXT PRIMARY KEY,
+      order_index INTEGER DEFAULT 0,
+      focus TEXT NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL,
+      image_url TEXT NOT NULL,
+      badge TEXT,
+      cta_text TEXT,
+      cta_link TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT,
+      updated_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS carousel_slides (
+      id TEXT PRIMARY KEY,
+      order_index INTEGER DEFAULT 0,
+      focus TEXT,
+      title TEXT NOT NULL,
+      subtitle TEXT,
+      image_url TEXT NOT NULL,
+      badge TEXT,
+      cta_text TEXT,
+      cta_link TEXT,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT,
+      updated_at TEXT
+    );
   `);
 
   // Migration: ensure machines table has client_company column
@@ -638,6 +693,9 @@ export async function initDatabase(): Promise<Database> {
 
   // Ensure financial module tables and mock data are seeded
   seedFinancialData(dbInstance);
+
+  // Ensure technical assistance institutional slides for Goiânia are seeded
+  seedAssistanceSlides(dbInstance);
 
   saveDatabase();
   return dbInstance;
@@ -3532,12 +3590,28 @@ const MYSQL_TABLE_SCHEMAS: Record<string, string> = {
   \`received_date\` VARCHAR(64),
   \`status\` VARCHAR(64) DEFAULT 'Pendente',
   \`notes\` TEXT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`,
+
+  assistance_slides: `CREATE TABLE IF NOT EXISTS \`assistance_slides\` (
+  \`id\` VARCHAR(64) PRIMARY KEY,
+  \`order_index\` INT DEFAULT 0,
+  \`focus\` VARCHAR(128) NOT NULL,
+  \`title\` VARCHAR(255) NOT NULL,
+  \`description\` TEXT NOT NULL,
+  \`image_url\` TEXT NOT NULL,
+  \`badge\` VARCHAR(255),
+  \`cta_text\` VARCHAR(128),
+  \`cta_link\` TEXT,
+  \`is_active\` TINYINT(1) DEFAULT 1,
+  \`created_at\` VARCHAR(64),
+  \`updated_at\` VARCHAR(64)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;`
 };
 
 export const ALL_BACKUP_TABLES = [
   'client_companies',
   'system_settings',
+  'assistance_slides',
   'roles',
   'scopes',
   'users',
@@ -3860,5 +3934,519 @@ export function deleteMaintenance(id: string): boolean {
     return false;
   }
 }
+
+// -------------------------------------------------------------
+// CARROSSEL INSTITUCIONAL DE ASSISTÊNCIA TÉCNICA EM GOIÂNIA (CRUD)
+// -------------------------------------------------------------
+
+export const DEFAULT_ASSISTANCE_SLIDES: AssistanceSlide[] = [
+  {
+    id: 'as_slide_1',
+    order_index: 0,
+    focus: 'Essencialidade',
+    badge: 'Foco: Essencialidade',
+    title: 'Tecnologia no seu dia a dia e no sucesso do seu negócio.',
+    description: 'Sabemos o quanto a tecnologia é fundamental para o seu dia a dia e para o sucesso do seu negócio. Atendimento ágil e consultoria técnica especializada para empresas em Goiânia.',
+    image_url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1920&q=80',
+    cta_text: 'Solicitar Atendimento Técnico',
+    cta_link: 'https://api.whatsapp.com/send?phone=5562982239004&text=Ol%C3%A1!%20Gostaria%20de%20solicitar%20atendimento%20t%C3%A9cnico%20para%20minha%20empresa%20em%20Goi%C3%A2nia.',
+    is_active: true
+  },
+  {
+    id: 'as_slide_2',
+    order_index: 1,
+    focus: 'Infraestrutura',
+    badge: 'Foco: Infraestrutura',
+    title: 'Laboratório próprio de última geração em Goiânia com especialistas qualificados.',
+    description: 'Contamos com laboratório próprio de última geração em Goiânia com bancadas antiestáticas (ESD), instrumentação de precisão e engenheiros certificados.',
+    image_url: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1920&q=80',
+    cta_text: 'Conhecer Nosso Laboratório',
+    cta_link: 'https://api.whatsapp.com/send?phone=5562982239004&text=Ol%C3%A1!%20Gostaria%20de%20conhecer%20a%20estrutura%20do%20laborat%C3%B3rio%20pr%C3%B3prio%20em%20Goi%C3%A2nia.',
+    is_active: true
+  },
+  {
+    id: 'as_slide_3',
+    order_index: 2,
+    focus: 'Complexidade',
+    badge: 'Foco: Complexidade',
+    title: 'Resolução desde problemas simples de lentidão até os reparos eletrônicos mais complexos.',
+    description: 'Resolvemos desde problemas operacionais simples de lentidão e formatação até microeletrônica avançada, recuperação de placas-mãe e reparos em servidores.',
+    image_url: 'https://images.unsplash.com/photo-1597733336794-12d05021d510?auto=format&fit=crop&w=1920&q=80',
+    cta_text: 'Avaliar Reparo Complexo',
+    cta_link: 'https://api.whatsapp.com/send?phone=5562982239004&text=Ol%C3%A1!%20Preciso%20de%20um%20reparo%20t%C3%A9cnico%20eletr%C3%B4nico%20complexo%20para%20meu%20equipamento.',
+    is_active: true
+  },
+  {
+    id: 'as_slide_4',
+    order_index: 3,
+    focus: 'Confiança',
+    badge: 'Foco: Confiança',
+    title: 'Peças de alta qualidade, garantia em todos os serviços e total transparência no diagnóstico.',
+    description: 'Trabalhamos com componentes originais e homologados, laudos técnicos detalhados com fotos e garantia formal em todos os procedimentos executados.',
+    image_url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1920&q=80',
+    cta_text: 'Diagnóstico com Garantia',
+    cta_link: 'https://api.whatsapp.com/send?phone=5562982239004&text=Ol%C3%A1!%20Gostaria%20de%20um%20diagn%C3%B3stico%20transparente%20com%20garantia%20para%20minha%20empresa.',
+    is_active: true
+  },
+  {
+    id: 'as_slide_5',
+    order_index: 4,
+    focus: 'Chamada para Ação',
+    badge: 'Foco: Chamada para Ação',
+    title: 'Deixe a tecnologia com quem entende e tenha a tranquilidade que você merece!',
+    description: 'Deixe a tecnologia com quem entende e tenha a tranquilidade que você merece! Nossa equipe em Goiânia cuida de toda a infraestrutura técnica com agilidade.',
+    image_url: 'https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=1920&q=80',
+    cta_text: 'Falar com Especialista via WhatsApp',
+    cta_link: 'https://api.whatsapp.com/send?phone=5562982239004&text=Ol%C3%A1!%20Quero%20falar%20com%20um%20especialista%20da%20W3W%20em%20Goi%C3%A2nia.',
+    is_active: true
+  }
+];
+
+export function seedAssistanceSlides(db: Database): void {
+  try {
+    const res = db.exec("SELECT count(*) as count FROM assistance_slides");
+    const count = res[0]?.values[0]?.[0] as number;
+    if (!count || count === 0) {
+      const now = new Date().toISOString();
+      for (const slide of DEFAULT_ASSISTANCE_SLIDES) {
+        db.run(
+          `INSERT INTO assistance_slides (id, order_index, focus, title, description, image_url, badge, cta_text, cta_link, is_active, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            slide.id,
+            slide.order_index,
+            slide.focus,
+            slide.title,
+            slide.description,
+            slide.image_url,
+            slide.badge || null,
+            slide.cta_text || null,
+            slide.cta_link || null,
+            slide.is_active ? 1 : 0,
+            now,
+            now
+          ]
+        );
+      }
+    }
+
+    // Também garante seed na tabela carousel_slides
+    try {
+      const cRes = db.exec("SELECT count(*) as count FROM carousel_slides");
+      const cCount = cRes[0]?.values[0]?.[0] as number;
+      if (!cCount || cCount === 0) {
+        const now = new Date().toISOString();
+        for (const slide of DEFAULT_ASSISTANCE_SLIDES) {
+          db.run(
+            `INSERT INTO carousel_slides (id, order_index, focus, title, subtitle, image_url, badge, cta_text, cta_link, is_active, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              slide.id,
+              slide.order_index,
+              slide.focus,
+              slide.title,
+              slide.description,
+              slide.image_url,
+              slide.badge || null,
+              slide.cta_text || null,
+              slide.cta_link || null,
+              slide.is_active ? 1 : 0,
+              now,
+              now
+            ]
+          );
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  } catch (err) {
+    console.warn('Could not seed assistance_slides:', err);
+  }
+}
+
+export function getAssistanceSlides(activeOnly: boolean = false): AssistanceSlide[] {
+  if (!dbInstance) return DEFAULT_ASSISTANCE_SLIDES;
+  try {
+    const query = activeOnly
+      ? "SELECT * FROM assistance_slides WHERE is_active = 1 ORDER BY order_index ASC, created_at ASC"
+      : "SELECT * FROM assistance_slides ORDER BY order_index ASC, created_at ASC";
+    const res = dbInstance.exec(query);
+    if (!res || res.length === 0 || !res[0].values) return DEFAULT_ASSISTANCE_SLIDES;
+
+    const cols = res[0].columns;
+    const slides: AssistanceSlide[] = res[0].values.map((row: any[]) => {
+      const obj: any = {};
+      cols.forEach((col, idx) => {
+        obj[col] = row[idx];
+      });
+      const orderIndex = Number(obj.order_index ?? 0);
+      const focus = obj.focus || 'Institucional';
+      const title = obj.title || '';
+      const description = obj.description || obj.subtitle || '';
+      const imageUrl = obj.image_url || '';
+      const isActive = Boolean(obj.is_active === 1 || obj.is_active === '1' || obj.is_active === true);
+
+      return {
+        id: obj.id,
+        order_index: orderIndex,
+        ordem: orderIndex,
+        focus,
+        foco: focus,
+        title,
+        titulo: title,
+        description,
+        subtitle: description,
+        subtitulo: description,
+        image_url: imageUrl,
+        imagem: imageUrl,
+        badge: obj.badge || `Foco: ${focus}`,
+        cta_text: obj.cta_text || 'Falar no WhatsApp',
+        cta_link: obj.cta_link || '',
+        is_active: isActive,
+        ativo: isActive,
+        created_at: obj.created_at,
+        updated_at: obj.updated_at
+      };
+    });
+
+    return slides.length > 0 ? slides : DEFAULT_ASSISTANCE_SLIDES;
+  } catch (err) {
+    console.warn('Error fetching assistance slides:', err);
+    return DEFAULT_ASSISTANCE_SLIDES;
+  }
+}
+
+export function getAssistanceSlideById(id: string): AssistanceSlide | null {
+  if (!dbInstance) return null;
+  try {
+    const cleanId = id.replace(/'/g, "''");
+    const res = dbInstance.exec(`SELECT * FROM assistance_slides WHERE id = '${cleanId}'`);
+    if (!res || res.length === 0 || !res[0].values || res[0].values.length === 0) return null;
+    const cols = res[0].columns;
+    const row = res[0].values[0];
+    const obj: any = {};
+    cols.forEach((col, idx) => { obj[col] = row[idx]; });
+
+    const orderIndex = Number(obj.order_index ?? 0);
+    const focus = obj.focus || 'Institucional';
+    const title = obj.title || '';
+    const description = obj.description || obj.subtitle || '';
+    const imageUrl = obj.image_url || '';
+    const isActive = Boolean(obj.is_active === 1 || obj.is_active === '1' || obj.is_active === true);
+
+    return {
+      id: obj.id,
+      order_index: orderIndex,
+      ordem: orderIndex,
+      focus,
+      foco: focus,
+      title,
+      titulo: title,
+      description,
+      subtitle: description,
+      subtitulo: description,
+      image_url: imageUrl,
+      imagem: imageUrl,
+      badge: obj.badge,
+      cta_text: obj.cta_text,
+      cta_link: obj.cta_link,
+      is_active: isActive,
+      ativo: isActive,
+      created_at: obj.created_at,
+      updated_at: obj.updated_at
+    };
+  } catch (err) {
+    console.error('Error fetching slide by id:', err);
+    return null;
+  }
+}
+
+export function createAssistanceSlide(data: Partial<AssistanceSlide>): AssistanceSlide {
+  if (!dbInstance) throw new Error('Database not initialized');
+  const now = new Date().toISOString();
+  const id = (data as any).id || ('as_slide_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6));
+
+  const title = (data as any).title || (data as any).titulo || 'Título do Slide';
+  const description = (data as any).description || (data as any).subtitle || (data as any).subtitulo || 'Descrição do slide institucional.';
+  const imageUrl = (data as any).image_url || (data as any).imagem || DEFAULT_ASSISTANCE_SLIDES[0].image_url;
+  const orderIndex = typeof (data as any).order_index === 'number'
+    ? (data as any).order_index
+    : (typeof (data as any).ordem === 'number' ? (data as any).ordem : 0);
+  const focus = (data as any).focus || (data as any).foco || 'Institucional';
+  const isActive = (data as any).is_active !== undefined
+    ? Boolean((data as any).is_active)
+    : ((data as any).ativo !== undefined ? Boolean((data as any).ativo) : true);
+
+  const slide: AssistanceSlide = {
+    id,
+    order_index: orderIndex,
+    ordem: orderIndex,
+    focus,
+    foco: focus,
+    title,
+    titulo: title,
+    description,
+    subtitle: description,
+    subtitulo: description,
+    image_url: imageUrl,
+    imagem: imageUrl,
+    badge: (data as any).badge || (focus ? `Foco: ${focus}` : 'Assistência Técnica Goiânia'),
+    cta_text: (data as any).cta_text || 'Falar no WhatsApp',
+    cta_link: (data as any).cta_link || 'https://api.whatsapp.com/send?phone=5562982239004',
+    is_active: isActive,
+    ativo: isActive,
+    created_at: now,
+    updated_at: now
+  };
+
+  dbInstance.run(
+    `INSERT INTO assistance_slides (id, order_index, focus, title, description, image_url, badge, cta_text, cta_link, is_active, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [
+      slide.id,
+      slide.order_index,
+      slide.focus,
+      slide.title,
+      slide.description,
+      slide.image_url,
+      slide.badge || null,
+      slide.cta_text || null,
+      slide.cta_link || null,
+      slide.is_active ? 1 : 0,
+      slide.created_at || null,
+      slide.updated_at || null
+    ]
+  );
+
+  try {
+    dbInstance.run(
+      `INSERT INTO carousel_slides (id, order_index, focus, title, subtitle, image_url, badge, cta_text, cta_link, is_active, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        slide.id,
+        slide.order_index,
+        slide.focus,
+        slide.title,
+        slide.description,
+        slide.image_url,
+        slide.badge || null,
+        slide.cta_text || null,
+        slide.cta_link || null,
+        slide.is_active ? 1 : 0,
+        slide.created_at || null,
+        slide.updated_at || null
+      ]
+    );
+  } catch (e) {
+    // ignore
+  }
+
+  saveDatabase();
+  return slide;
+}
+
+export function updateAssistanceSlide(id: string, updates: Partial<AssistanceSlide>): AssistanceSlide | null {
+  if (!dbInstance) return null;
+  try {
+    const existing = getAssistanceSlideById(id);
+    if (!existing) return null;
+
+    const now = new Date().toISOString();
+    const title = (updates as any).title ?? (updates as any).titulo ?? existing.title;
+    const description = (updates as any).description ?? (updates as any).subtitle ?? (updates as any).subtitulo ?? existing.description;
+    const imageUrl = (updates as any).image_url ?? (updates as any).imagem ?? existing.image_url;
+    const orderIndex = (updates as any).order_index ?? (updates as any).ordem ?? existing.order_index;
+    const focus = (updates as any).focus ?? (updates as any).foco ?? existing.focus;
+    const isActive = (updates as any).is_active !== undefined
+      ? Boolean((updates as any).is_active)
+      : ((updates as any).ativo !== undefined ? Boolean((updates as any).ativo) : existing.is_active);
+
+    const updated: AssistanceSlide = {
+      ...existing,
+      ...updates,
+      title,
+      titulo: title,
+      description,
+      subtitle: description,
+      subtitulo: description,
+      image_url: imageUrl,
+      imagem: imageUrl,
+      order_index: orderIndex,
+      ordem: orderIndex,
+      focus,
+      foco: focus,
+      is_active: isActive,
+      ativo: isActive,
+      updated_at: now
+    };
+
+    dbInstance.run(
+      `UPDATE assistance_slides SET
+        order_index = ?,
+        focus = ?,
+        title = ?,
+        description = ?,
+        image_url = ?,
+        badge = ?,
+        cta_text = ?,
+        cta_link = ?,
+        is_active = ?,
+        updated_at = ?
+       WHERE id = ?`,
+      [
+        updated.order_index,
+        updated.focus,
+        updated.title,
+        updated.description,
+        updated.image_url,
+        updated.badge || null,
+        updated.cta_text || null,
+        updated.cta_link || null,
+        updated.is_active ? 1 : 0,
+        updated.updated_at || null,
+        id
+      ]
+    );
+
+    try {
+      dbInstance.run(
+        `UPDATE carousel_slides SET
+          order_index = ?,
+          focus = ?,
+          title = ?,
+          subtitle = ?,
+          image_url = ?,
+          badge = ?,
+          cta_text = ?,
+          cta_link = ?,
+          is_active = ?,
+          updated_at = ?
+         WHERE id = ?`,
+        [
+          updated.order_index,
+          updated.focus,
+          updated.title,
+          updated.description,
+          updated.image_url,
+          updated.badge || null,
+          updated.cta_text || null,
+          updated.cta_link || null,
+          updated.is_active ? 1 : 0,
+          updated.updated_at || null,
+          id
+        ]
+      );
+    } catch (e) {
+      // ignore
+    }
+
+    saveDatabase();
+    return updated;
+  } catch (err) {
+    console.error('Error updating assistance slide:', err);
+    return null;
+  }
+}
+
+export function deleteAssistanceSlide(id: string): boolean {
+  if (!dbInstance) return false;
+  try {
+    dbInstance.run('DELETE FROM assistance_slides WHERE id = ?', [id]);
+    try {
+      dbInstance.run('DELETE FROM carousel_slides WHERE id = ?', [id]);
+    } catch (e) {}
+    saveDatabase();
+    return true;
+  } catch (err) {
+    console.error('Error deleting assistance slide:', err);
+    return false;
+  }
+}
+
+export function reorderAssistanceSlides(orderedIds: string[]): boolean {
+  if (!dbInstance) return false;
+  try {
+    orderedIds.forEach((id, index) => {
+      dbInstance?.run('UPDATE assistance_slides SET order_index = ? WHERE id = ?', [index, id]);
+      try {
+        dbInstance?.run('UPDATE carousel_slides SET order_index = ? WHERE id = ?', [index, id]);
+      } catch (e) {}
+    });
+    saveDatabase();
+    return true;
+  } catch (err) {
+    console.error('Error reordering assistance slides:', err);
+    return false;
+  }
+}
+
+export function resetAssistanceSlidesToDefault(): AssistanceSlide[] {
+  if (!dbInstance) return DEFAULT_ASSISTANCE_SLIDES;
+  try {
+    dbInstance.run('DELETE FROM assistance_slides');
+    try {
+      dbInstance.run('DELETE FROM carousel_slides');
+    } catch (e) {}
+
+    const now = new Date().toISOString();
+    for (const slide of DEFAULT_ASSISTANCE_SLIDES) {
+      dbInstance.run(
+        `INSERT INTO assistance_slides (id, order_index, focus, title, description, image_url, badge, cta_text, cta_link, is_active, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          slide.id,
+          slide.order_index,
+          slide.focus,
+          slide.title,
+          slide.description,
+          slide.image_url,
+          slide.badge || null,
+          slide.cta_text || null,
+          slide.cta_link || null,
+          slide.is_active ? 1 : 0,
+          now,
+          now
+        ]
+      );
+
+      try {
+        dbInstance.run(
+          `INSERT INTO carousel_slides (id, order_index, focus, title, subtitle, image_url, badge, cta_text, cta_link, is_active, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            slide.id,
+            slide.order_index,
+            slide.focus,
+            slide.title,
+            slide.description,
+            slide.image_url,
+            slide.badge || null,
+            slide.cta_text || null,
+            slide.cta_link || null,
+            slide.is_active ? 1 : 0,
+            now,
+            now
+          ]
+        );
+      } catch (e) {}
+    }
+    saveDatabase();
+    return getAssistanceSlides();
+  } catch (err) {
+    console.error('Error resetting assistance slides:', err);
+    return DEFAULT_ASSISTANCE_SLIDES;
+  }
+}
+
+// Carousel slides function aliases
+export const getCarouselSlides = getAssistanceSlides;
+export const getCarouselSlideById = getAssistanceSlideById;
+export const createCarouselSlide = createAssistanceSlide;
+export const updateCarouselSlide = updateAssistanceSlide;
+export const deleteCarouselSlide = deleteAssistanceSlide;
+export const reorderCarouselSlides = reorderAssistanceSlides;
+export const resetCarouselSlidesToDefault = resetAssistanceSlidesToDefault;
+
 
 

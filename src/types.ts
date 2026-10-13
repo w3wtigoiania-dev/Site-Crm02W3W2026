@@ -152,6 +152,31 @@ export interface HeroSlide {
   bgImage: string;
 }
 
+export interface AssistanceSlide {
+  id: string;
+  order_index: number;
+  ordem?: number;
+  focus: string; // 'Essencialidade' | 'Infraestrutura' | 'Complexidade' | 'Confiança' | 'Chamada para Ação'
+  foco?: string;
+  title: string;
+  titulo?: string;
+  description: string;
+  subtitle?: string;
+  subtitulo?: string;
+  image_url: string;
+  imagem?: string;
+  badge?: string;
+  cta_text?: string;
+  cta_link?: string;
+  is_active?: boolean;
+  ativo?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type CarouselSlide = AssistanceSlide;
+
+
 export interface WebsiteConfig {
   diagnostic_tag?: string;
   diagnostic_location?: string;
@@ -161,6 +186,7 @@ export interface WebsiteConfig {
   contact_whatsapp?: string;
   contact_email?: string;
   slides?: HeroSlide[];
+  assistance_slides?: AssistanceSlide[];
 }
 
 export interface SystemSettings {

@@ -3,6 +3,7 @@ import { WebsiteConfig } from '../types.ts';
 import { useSharedCMSConfig, cmsSyncManager } from '../services/cmsSyncModule.ts';
 import { W3WLogo } from './W3WLogo.tsx';
 import { W3WBrandTitle } from './W3WBrandTitle.tsx';
+import { TechnicalAssistanceCarousel } from './TechnicalAssistanceCarousel.tsx';
 import {
   Shield,
   Headphones,
@@ -307,13 +308,13 @@ Solicito a análise técnica gratuita com os especialistas da W3W!`;
         </div>
       )}
 
-      {/* 2. MAIN NAVBAR (EXACT MATCH FOR IMAGEM 01) */}
+      {/* 2. MAIN NAVBAR (DESIGNER PADRÃO: LOGO OFICIAL DELIMITADA E MENU CENTRADO SEM SOBREPOSIÇÃO) */}
       <header className="sticky top-0 z-40 bg-[#060a12]/95 backdrop-blur-md border-b border-slate-900/90">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
-          {/* Logo & Slogan (IMAGEM 01: AO CLICAR NA LOGO VOLTAR PARA HOME PÁGINA INICIAL) */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-3 sm:gap-4 lg:gap-6">
+          {/* Logo & Marca Oficial (IMAGEM 01 / IMAGEM 02: CLICAR VOLTA PARA HOME) */}
           <div
             onClick={handleGoHome}
-            className="flex items-center gap-3 flex-shrink-0 cursor-pointer hover:opacity-90 transition-opacity select-none group"
+            className="flex items-center flex-shrink-0 cursor-pointer hover:opacity-95 transition-all select-none group min-w-0 mr-2 lg:mr-4 xl:mr-6"
             title="W3W Soluções em TI - Voltar para Página Inicial"
             role="button"
             tabIndex={0}
@@ -323,19 +324,17 @@ Solicito a análise técnica gratuita com os especialistas da W3W!`;
               }
             }}
           >
-            {/* W3W Official SVG Vector Logo */}
-            <div className="group-hover:scale-105 transition-transform duration-200">
-              <W3WLogo className="w-13 h-13 sm:w-14 sm:h-14 flex-shrink-0" />
+            {/* Logomarca Vetorial Oficial W3W com 3 Estilizado, Seta '>' Animada e SOLUÇÕES TI Proporcional */}
+            <div className="group-hover:scale-[1.02] transition-transform duration-200">
+              <W3WBrandTitle size="navbar" showSubtitle={false} />
             </div>
-
-            <W3WBrandTitle showSubtitle={false} />
           </div>
 
-          {/* Center Navigation Menu in Rounded Container with vertical separators (EXACT MATCH FOR IMAGEM 02 - MODERNO E ADAPTÁVEL) */}
-          <nav className="hidden lg:flex items-center bg-[#070d18]/95 border border-slate-800/80 rounded-full p-1.5 shadow-inner gap-1 sm:gap-1.5 flex-shrink-0">
+          {/* Center Navigation Menu in Rounded Container with vertical separators (DESIGNER PADRÃO COM RESPIRO E SEM COLISÃO) */}
+          <nav className="hidden lg:flex items-center bg-[#070d18]/95 border border-slate-800/80 rounded-full p-1 shadow-inner gap-0.5 xl:gap-1 flex-shrink-0 mx-auto">
             <button
               onClick={() => handleNavClick('solucoes')}
-              className={`rounded-xl px-3.5 sm:px-4 py-2 text-xs sm:text-[13px] font-bold whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center justify-center ${
+              className={`rounded-xl px-2.5 xl:px-3.5 py-1.5 xl:py-2 text-[11px] xl:text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center justify-center ${
                 activeNav === 'solucoes'
                   ? 'bg-[#0c1424] text-white font-extrabold border-2 border-orange-500 shadow-[0_0_18px_rgba(249,115,22,0.7)] ring-1 ring-orange-500/40'
                   : 'bg-[#0c1424] text-orange-400 hover:text-orange-300 hover:bg-[#101b2f] border border-slate-800/80 shadow-sm'
@@ -348,7 +347,7 @@ Solicito a análise técnica gratuita com os especialistas da W3W!`;
 
             <button
               onClick={() => handleNavClick('modelos')}
-              className={`rounded-xl px-3.5 sm:px-4 py-2 text-xs sm:text-[13px] font-bold whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center justify-center ${
+              className={`rounded-xl px-2.5 xl:px-3.5 py-1.5 xl:py-2 text-[11px] xl:text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center justify-center ${
                 activeNav === 'modelos'
                   ? 'bg-[#0c1424] text-white font-extrabold border-2 border-orange-500 shadow-[0_0_18px_rgba(249,115,22,0.7)] ring-1 ring-orange-500/40'
                   : 'bg-[#0c1424] text-orange-400 hover:text-orange-300 hover:bg-[#101b2f] border border-slate-800/80 shadow-sm'
@@ -361,7 +360,7 @@ Solicito a análise técnica gratuita com os especialistas da W3W!`;
 
             <button
               onClick={() => handleNavClick('pilares')}
-              className={`rounded-xl px-3.5 sm:px-4 py-2 text-xs sm:text-[13px] font-bold whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center justify-center ${
+              className={`rounded-xl px-2.5 xl:px-3.5 py-1.5 xl:py-2 text-[11px] xl:text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center justify-center ${
                 activeNav === 'pilares'
                   ? 'bg-[#0c1424] text-white font-extrabold border-2 border-orange-500 shadow-[0_0_18px_rgba(249,115,22,0.7)] ring-1 ring-orange-500/40'
                   : 'bg-[#0c1424] text-orange-400 hover:text-orange-300 hover:bg-[#101b2f] border border-slate-800/80 shadow-sm'
@@ -374,7 +373,7 @@ Solicito a análise técnica gratuita com os especialistas da W3W!`;
 
             <button
               onClick={() => handleNavClick('metodologia')}
-              className={`rounded-xl px-3.5 sm:px-4 py-2 text-xs sm:text-[13px] font-bold whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center justify-center ${
+              className={`rounded-xl px-2.5 xl:px-3.5 py-1.5 xl:py-2 text-[11px] xl:text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center justify-center ${
                 activeNav === 'metodologia'
                   ? 'bg-[#0c1424] text-white font-extrabold border-2 border-orange-500 shadow-[0_0_18px_rgba(249,115,22,0.7)] ring-1 ring-orange-500/40'
                   : 'bg-[#0c1424] text-orange-400 hover:text-orange-300 hover:bg-[#101b2f] border border-slate-800/80 shadow-sm'
@@ -387,7 +386,7 @@ Solicito a análise técnica gratuita com os especialistas da W3W!`;
 
             <button
               onClick={() => handleNavClick('contato')}
-              className={`rounded-xl px-4 sm:px-5 py-2 text-xs sm:text-[13px] font-bold whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center justify-center ${
+              className={`rounded-xl px-3 xl:px-4 py-1.5 xl:py-2 text-[11px] xl:text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer flex items-center justify-center ${
                 activeNav === 'contato'
                   ? 'bg-[#0c1424] text-white font-extrabold border-2 border-orange-500 shadow-[0_0_18px_rgba(249,115,22,0.7)] ring-1 ring-orange-500/40'
                   : 'bg-[#0c1424] text-orange-400 hover:text-orange-300 hover:bg-[#101b2f] border border-slate-800/80 shadow-sm'
@@ -1399,20 +1398,32 @@ Solicito a análise técnica gratuita com os especialistas da W3W!`;
               Serviços de engenharia tecnológica desenvolvidos para garantir conformidade legal, resiliência operacional e máxima performance para sua empresa.
             </p>
 
-            {/* Card com Ícone de Chave Inglesa / Assistência Técnica em Goiânia */}
-            <div className="mt-6 rounded-2xl sm:rounded-3xl border border-slate-800 bg-[#080d1a]/95 p-5 sm:p-7 lg:p-8 shadow-xl relative overflow-hidden">
-              <div className="flex items-center gap-3.5 mb-4">
-                <div className="p-2.5 rounded-xl bg-orange-500/15 border border-orange-500/30 text-orange-400 flex-shrink-0">
-                  <Wrench className="w-5 h-5 text-orange-400" />
-                </div>
-                <h3 className="text-base sm:text-lg lg:text-xl font-bold text-white tracking-tight">
-                  Por que escolher a nossa assistência técnica em Goiânia?
-                </h3>
-              </div>
+            {/* Carrossel Dinâmico de Slides de Assistência Técnica em Goiânia */}
+            <div className="mt-6 space-y-4">
+              <TechnicalAssistanceCarousel
+                onOpenDiagnosticModal={() => handleOpenDiagnostic(1)}
+              />
 
-              <p className="text-slate-300 text-xs sm:text-sm lg:text-[15px] leading-relaxed text-justify sm:text-left">
-                Sabemos o quanto a tecnologia é fundamental para o seu dia a dia e para o sucesso do seu negócio. É por isso que contamos com um <strong className="text-white font-bold">laboratório próprio de última geração em Goiânia</strong> e uma equipe de <strong className="text-white font-bold">especialistas qualificados</strong> para resolver desde problemas simples de lentidão até os <strong className="text-white font-bold">reparos eletrônicos mais complexos</strong>. Trabalhamos com <strong className="text-white font-bold">peças de alta qualidade</strong>, <strong className="text-white font-bold">garantia em todos os serviços</strong> e <strong className="text-white font-bold">total transparência no diagnóstico</strong> do seu equipamento. Deixe a tecnologia com quem entende e tenha a tranquilidade que você merece!
-              </p>
+              {/* Card de Texto Institucional Completo Mantido na Íntegra (Incremental) */}
+              <div className="rounded-2xl sm:rounded-3xl border border-slate-800 bg-[#080d1a]/95 p-5 sm:p-7 lg:p-8 shadow-xl relative overflow-hidden">
+                <div className="flex items-center gap-3.5 mb-4">
+                  <div className="p-2.5 rounded-xl bg-orange-500/15 border border-orange-500/30 text-orange-400 flex-shrink-0">
+                    <Wrench className="w-5 h-5 text-orange-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-base sm:text-lg lg:text-xl font-bold text-white tracking-tight">
+                      Por que escolher a nossa assistência técnica em Goiânia?
+                    </h3>
+                    <span className="text-[11px] font-mono text-orange-400/80">
+                      Declaração Institucional Oficial de Infraestrutura
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-slate-300 text-xs sm:text-sm lg:text-[15px] leading-relaxed text-justify sm:text-left">
+                  Sabemos o quanto a tecnologia é fundamental para o seu dia a dia e para o sucesso do seu negócio. É por isso que contamos com um <strong className="text-white font-bold">laboratório próprio de última geração em Goiânia</strong> e uma equipe de <strong className="text-white font-bold">especialistas qualificados</strong> para resolver desde problemas simples de lentidão até os <strong className="text-white font-bold">reparos eletrônicos mais complexos</strong>. Trabalhamos com <strong className="text-white font-bold">peças de alta qualidade</strong>, <strong className="text-white font-bold">garantia em todos os serviços</strong> e <strong className="text-white font-bold">total transparência no diagnóstico</strong> do seu equipamento. Deixe a tecnologia com quem entende e tenha a tranquilidade que você merece!
+                </p>
+              </div>
             </div>
           </div>
         </section>

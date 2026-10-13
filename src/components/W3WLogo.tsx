@@ -39,11 +39,21 @@ export const W3WLogo: React.FC<W3WLogoProps> = ({ className = 'w-12 h-12', size 
           <path d="M 284,220 L 311,200 L 330,262 L 353,182 L 381,182 L 404,262 L 425,182 L 460,182 L 418,298 L 389,298 L 367,225 L 347,298 L 318,298 Z" />
         </g>
 
-        {/* Topo Laranja do 3 (Formato de Seta Dinâmica) */}
-        <polygon
-          points="202,182 323,182 243,244 229,224 257,204 215,204"
-          fill="#f38313"
-        />
+        <defs>
+          <linearGradient id="w3wCircleArrowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#ea580c" />
+            <stop offset="40%" stopColor="#f38313" />
+            <stop offset="100%" stopColor="#fb923c" />
+          </linearGradient>
+        </defs>
+
+        {/* Topo Laranja do 3 (Formato de Seta Dinâmica com Animação) */}
+        <g className="animate-w3w-arrow">
+          <polygon
+            points="202,182 323,182 243,244 229,224 257,204 215,204"
+            fill="url(#w3wCircleArrowGrad)"
+          />
+        </g>
 
         {/* Subtítulo Laranja */}
         <text

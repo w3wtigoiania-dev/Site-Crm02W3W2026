@@ -38,8 +38,10 @@ import {
   Database,
   Settings2,
   Tag,
-  Printer
+  Printer,
+  Smartphone
 } from 'lucide-react';
+import { PayablesMobileSimulatorModal } from './PayablesMobileSimulatorModal.tsx';
 
 interface FinancialModuleProps {
   companies: ClientCompany[];
@@ -100,6 +102,7 @@ export const FinancialModule: React.FC<FinancialModuleProps> = ({
 
   // Modal State for new payable (IMAGEM 01: com parcelamento e recálculo automático)
   const [isPayableModalOpen, setIsPayableModalOpen] = useState(false);
+  const [isMobileSimulatorOpen, setIsMobileSimulatorOpen] = useState(false);
   const [editingPayable, setEditingPayable] = useState<AccountsPayableItem | null>(null);
   const [viewingPayable, setViewingPayable] = useState<AccountsPayableItem | null>(null);
   const [newPayableForm, setNewPayableForm] = useState({
@@ -1041,65 +1044,81 @@ export const FinancialModule: React.FC<FinancialModuleProps> = ({
         </div>
 
         {/* Sub-Tabs Selector */}
-        <div className="flex items-center gap-2 pt-4 overflow-x-auto">
-          <button
-            onClick={() => setActiveSubTab('card')}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
-              activeSubTab === 'card'
-                ? 'bg-purple-600 text-white shadow-md shadow-purple-600/25'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <CreditCard className="w-3.5 h-3.5" />
-            <span>Fatura & Gastos do Cartão</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-black/30 text-white">
-              {expenses.filter(e => e.is_active_in_competence).length}
-            </span>
-          </button>
+        <div className="flex items-center justify-between gap-2 pt-4 overflow-x-auto flex-wrap">
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <button
+              onClick={() => setActiveSubTab('card')}
+              className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+                activeSubTab === 'card'
+                  ? 'bg-purple-600 text-white shadow-md shadow-purple-600/25'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <CreditCard className="w-3.5 h-3.5" />
+              <span>Fatura & Gastos do Cartão</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-black/30 text-white">
+                {expenses.filter(e => e.is_active_in_competence).length}
+              </span>
+            </button>
 
-          <button
-            onClick={() => setActiveSubTab('payables')}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
-              activeSubTab === 'payables'
-                ? 'bg-rose-600 text-white shadow-md shadow-rose-600/25'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <TrendingDown className="w-3.5 h-3.5" />
-            <span>Contas a Pagar</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-black/30 text-white">
-              {payables.length}
-            </span>
-          </button>
+            <button
+              onClick={() => setActiveSubTab('payables')}
+              className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+                activeSubTab === 'payables'
+                  ? 'bg-rose-600 text-white shadow-md shadow-rose-600/25'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <TrendingDown className="w-3.5 h-3.5" />
+              <span>Contas a Pagar</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-black/30 text-white">
+                {payables.length}
+              </span>
+            </button>
 
-          <button
-            onClick={() => setActiveSubTab('receivables')}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
-              activeSubTab === 'receivables'
-                ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
-          >
-            <TrendingUp className="w-3.5 h-3.5" />
-            <span>Contas a Receber</span>
-            <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-black/30 text-white">
-              {receivables.length}
-            </span>
-          </button>
+            <button
+              onClick={() => setActiveSubTab('receivables')}
+              className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+                activeSubTab === 'receivables'
+                  ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/25'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <TrendingUp className="w-3.5 h-3.5" />
+              <span>Contas a Receber</span>
+              <span className="text-[10px] px-1.5 py-0.2 rounded-full font-mono bg-black/30 text-white">
+                {receivables.length}
+              </span>
+            </button>
 
+            <button
+              onClick={() => setActiveSubTab('forecast')}
+              className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
+                activeSubTab === 'forecast'
+                  ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Projeção Multi-Mês (Cronograma)</span>
+            </button>
+          </div>
+
+          {/* Botão de Atalho Rápido para Visualizar Contas a Pagar pelo Celular (IMAGEM 01 E 02) */}
           <button
-            onClick={() => setActiveSubTab('forecast')}
-            className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition-all flex items-center gap-2 cursor-pointer ${
-              activeSubTab === 'forecast'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/25'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800'
-            }`}
+            onClick={() => {
+              setActiveSubTab('payables');
+              setIsMobileSimulatorOpen(true);
+            }}
+            className="px-3.5 py-1.5 bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white text-xs font-bold rounded-lg shadow-sm shadow-purple-600/25 flex items-center gap-1.5 transition-all cursor-pointer ring-1 ring-purple-400/30 whitespace-nowrap ml-auto"
+            title="Visualizar Contas a Pagar pelo Celular: Telas Médias (6,1'-6,5') e Grandes (6,7'-6,8')"
           >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>Projeção Multi-Mês (Cronograma)</span>
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>Visualizar pelo Celular</span>
           </button>
         </div>
       </div>
+
 
       {/* KPI Cards: TOTAL GERAL - SALDO DEVEDOR and VT PRESTA */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1432,6 +1451,16 @@ export const FinancialModule: React.FC<FinancialModuleProps> = ({
                 <option value="Pendente">Pendentes</option>
                 <option value="Pago">Pagos</option>
               </select>
+
+              {/* Visualizar pelo Celular Button (IMAGEM 01 E 02: TELAS MÉDIAS E GRANDES) */}
+              <button
+                onClick={() => setIsMobileSimulatorOpen(true)}
+                className="px-3.5 py-1.5 bg-gradient-to-r from-rose-600 via-purple-600 to-indigo-600 hover:from-rose-500 hover:to-indigo-500 text-white text-xs font-bold rounded-lg shadow-sm shadow-purple-600/30 flex items-center gap-1.5 transition-all cursor-pointer ring-1 ring-purple-400/30"
+                title="Visualizar Contas a Pagar pelo Celular: Médias (6,1'-6,5') e Grandes (6,7'-6,8')"
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>Visualizar pelo Celular</span>
+              </button>
 
               {/* INSERT Button */}
               <button
@@ -3483,6 +3512,26 @@ export const FinancialModule: React.FC<FinancialModuleProps> = ({
           </div>
         </div>
       )}
+
+      {/* MODAL SIMULADOR: VISUALIZAR CONTAS A PAGAR PELO CELULAR (TELAS MÉDIAS E GRANDES) */}
+      <PayablesMobileSimulatorModal
+        isOpen={isMobileSimulatorOpen}
+        onClose={() => setIsMobileSimulatorOpen(false)}
+        payables={payables}
+        summary={summary}
+        competenceMonth={competenceMonth}
+        competenceYear={competenceYear}
+        monthName={monthNames[competenceMonth - 1]}
+        onToggleStatus={handleTogglePayableStatus}
+        onViewDetails={setViewingPayable}
+        onEditPayable={setEditingPayable}
+        onDeletePayable={handleDeletePayable}
+        onAddNew={() => {
+          setIsMobileSimulatorOpen(false);
+          setIsPayableModalOpen(true);
+        }}
+      />
     </div>
   );
 };
+

@@ -36,3 +36,39 @@
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(148, 163, 184, 0.7);
 }
+
+/* Animação Oficial da Seta '>' do Número 3 da Logomarca W3W */
+@keyframes w3wArrowPulse {
+  0%, 100% {
+    transform: translateX(0);
+    filter: drop-shadow(0 0 3px rgba(249, 115, 22, 0.6));
+    opacity: 0.95;
+  }
+  40% {
+    transform: translateX(2.5px);
+    filter: drop-shadow(0 0 10px rgba(249, 115, 22, 1)) drop-shadow(0 0 18px rgba(251, 146, 60, 0.7));
+    opacity: 1;
+  }
+  60% {
+    transform: translateX(2px);
+    filter: drop-shadow(0 0 8px rgba(249, 115, 22, 0.9));
+  }
+}
+
+.animate-w3w-arrow {
+  animation: w3wArrowPulse 2.6s ease-in-out infinite;
+  transform-origin: center;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), filter 0.25s ease;
+}
+
+.group:hover .animate-w3w-arrow,
+.hover-trigger:hover .animate-w3w-arrow {
+  animation-duration: 1.3s;
+  filter: drop-shadow(0 0 12px rgba(249, 115, 22, 1)) drop-shadow(0 0 22px rgba(249, 115, 22, 0.8));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-w3w-arrow {
+    animation: none;
+  }
+}

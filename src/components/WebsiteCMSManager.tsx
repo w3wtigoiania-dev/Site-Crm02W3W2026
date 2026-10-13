@@ -27,8 +27,10 @@ import {
   Database,
   RefreshCw,
   Zap,
-  AlertCircle
+  AlertCircle,
+  Wrench
 } from 'lucide-react';
+import { AssistanceSlidesManager } from './AssistanceSlidesManager.tsx';
 
 interface WebsiteCMSManagerProps {
   settings: SystemSettings;
@@ -82,6 +84,7 @@ export const WebsiteCMSManager: React.FC<WebsiteCMSManagerProps> = ({
   } = useCMSSync();
 
   const [selectedSlideIndex, setSelectedSlideIndex] = useState(0);
+  const [activeCmsTab, setActiveCmsTab] = useState<'hero' | 'assistance' | 'diagnostic' | 'all'>('hero');
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
@@ -316,7 +319,68 @@ export const WebsiteCMSManager: React.FC<WebsiteCMSManagerProps> = ({
         )}
       </div>
 
+      {/* NAVEGAÇÃO ENTRE MÓDULOS DO CMS */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-900 border border-slate-800 rounded-2xl">
+        <button
+          type="button"
+          onClick={() => setActiveCmsTab('hero')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            activeCmsTab === 'hero'
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Layers className="w-4 h-4 text-blue-300" />
+          <span>Banner Principal (Hero)</span>
+          <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-slate-800 text-slate-300 font-mono">
+            {slides.length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveCmsTab('assistance')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            activeCmsTab === 'assistance'
+              ? 'bg-gradient-to-r from-orange-600 to-amber-600 text-white shadow-lg shadow-orange-600/20'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Wrench className="w-4 h-4 text-orange-400" />
+          <span>Carrossel Assistência Técnica (Goiânia)</span>
+          <span className="px-1.5 py-0.5 text-[10px] rounded-full bg-orange-500/20 text-orange-300 font-mono font-bold border border-orange-500/30">
+            Destaque Dinâmico
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveCmsTab('diagnostic')}
+          className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+            activeCmsTab === 'diagnostic'
+              ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/20'
+              : 'text-slate-400 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Shield className="w-4 h-4 text-emerald-300" />
+          <span>Diagnóstico, SLA & Contatos</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveCmsTab('all')}
+          className={`ml-auto px-3.5 py-2 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+            activeCmsTab === 'all'
+              ? 'bg-slate-800 text-white border border-slate-700'
+              : 'text-slate-500 hover:text-slate-300'
+          }`}
+        >
+          <span>Exibir Todos</span>
+        </button>
+      </div>
+
       {/* SECTION 1: SLIDES DO HERO BANNER */}
+      {(activeCmsTab === 'hero' || activeCmsTab === 'all') && (
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
           <div>
@@ -580,8 +644,15 @@ export const WebsiteCMSManager: React.FC<WebsiteCMSManagerProps> = ({
           </div>
         )}
       </div>
+      )}
 
-      {/* SECTION 2: BARRA SUPERIOR DE DIAGNÓSTICO & CONTATOS */}
+      {/* SECTION 2: CARROSSEL INSTITUCIONAL DE ASSISTÊNCIA TÉCNICA (GOIÂNIA) */}
+      {(activeCmsTab === 'assistance' || activeCmsTab === 'all') && (
+        <AssistanceSlidesManager onViewWebsite={onViewWebsite} />
+      )}
+
+      {/* SECTION 3: BARRA SUPERIOR DE DIAGNÓSTICO & CONTATOS */}
+      {(activeCmsTab === 'diagnostic' || activeCmsTab === 'all') && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Barra Superior de Diagnóstico */}
         <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-xl space-y-4 text-xs">
@@ -715,6 +786,7 @@ export const WebsiteCMSManager: React.FC<WebsiteCMSManagerProps> = ({
           </div>
         </div>
       </div>
+      )}
     </div>
   );
 };

@@ -63,7 +63,21 @@ import {
   getAllMaintenances,
   createMaintenance,
   updateMaintenance,
-  deleteMaintenance
+  deleteMaintenance,
+  getAssistanceSlides,
+  getAssistanceSlideById,
+  createAssistanceSlide,
+  updateAssistanceSlide,
+  deleteAssistanceSlide,
+  reorderAssistanceSlides,
+  resetAssistanceSlidesToDefault,
+  getCarouselSlides,
+  getCarouselSlideById,
+  createCarouselSlide,
+  updateCarouselSlide,
+  deleteCarouselSlide,
+  reorderCarouselSlides,
+  resetCarouselSlidesToDefault
 } from './server/db.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -75,6 +89,12 @@ const isDev = process.env.NODE_ENV !== 'production';
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+
+const UPLOADS_DIR = path.resolve(__dirname, 'data', 'uploads');
+if (!fs.existsSync(UPLOADS_DIR)) {
+  fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+}
+app.use('/uploads', express.static(UPLOADS_DIR));
 
 // Simple in-memory session tokens for demo / auth
 const activeSessions = new Set<string>(['demo_admin_session_token']);
@@ -657,6 +677,24 @@ function broadcastCmsUpdate(websiteConfig: any, senderId?: string) {
   }
 }
 
+function broadcastAssistanceSlidesUpdate(slides: any[], senderId?: string) {
+  if (!slides) return;
+  const payload = JSON.stringify({
+    type: 'assistance_slides_updated',
+    assistance_slides: slides,
+    timestamp: new Date().toISOString(),
+    senderId: senderId || 'server'
+  });
+
+  for (const client of sseCmsClients) {
+    try {
+      client.write(`data: ${payload}\n\n`);
+    } catch (e) {
+      sseCmsClients.delete(client);
+    }
+  }
+}
+
 // Stream SSE em tempo real para sincronização instantânea com W3WSiteView e CRM
 app.get('/api/cms/events', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
@@ -667,12 +705,14 @@ app.get('/api/cms/events', (req, res) => {
 
   sseCmsClients.add(res);
 
-  // Envia payload inicial com a configuração atual do website
+  // Envia payload inicial com a configuração atual do website e slides de assistência
   try {
     const current = getSystemSettings();
+    const assistanceSlides = getAssistanceSlides(true);
     const initPayload = JSON.stringify({
       type: 'connected',
       website_config: current.website_config,
+      assistance_slides: assistanceSlides,
       timestamp: new Date().toISOString(),
       activeClients: sseCmsClients.size
     });
@@ -742,6 +782,210 @@ app.put('/api/settings', (req, res) => {
     console.error('Error updating settings:', err);
     res.status(500).json({ error: 'Erro ao salvar parâmetros do sistema: ' + err.message });
   }
+});
+
+// -------------------------------------------------------------
+// CARROSSEL INSTITUCIONAL & SLIDES (API MOCK / PERSISTÊNCIA SQLITE)
+// Rotas unificadas: /api/carousel-slides, /api/slides, /api/assistance-slides
+// -------------------------------------------------------------
+
+// Esquema de banco de dados e metadados dos slides do carrossel
+const CAROUSEL_DB_SCHEMA = {
+  table: 'carousel_slides',
+  description: 'Tabela de persistência dos slides do carrossel institucional',
+  fields: [
+    { name: 'id', type: 'VARCHAR(64)', primary_key: true, description: 'Identificador único do slide' },
+    { name: 'image_url', aliases: ['imagem'], type: 'TEXT', required: true, description: 'URL ou Data URI da imagem do slide' },
+    { name: 'title', aliases: ['titulo'], type: 'VARCHAR(255)', required: true, description: 'Título principal do slide' },
+    { name: 'subtitle', aliases: ['subtitulo', 'description'], type: 'TEXT', required: false, description: 'Subtítulo ou descrição do slide' },
+    { name: 'order_index', aliases: ['ordem'], type: 'INTEGER', default: 0, description: 'Ordem sequencial de exibição' },
+    { name: 'focus', aliases: ['foco'], type: 'VARCHAR(100)', default: 'Institucional', description: 'Área de foco técnico' },
+    { name: 'badge', type: 'VARCHAR(100)', required: false, description: 'Selo ou tag em destaque' },
+    { name: 'cta_text', type: 'VARCHAR(100)', default: 'Falar no WhatsApp', description: 'Texto da chamada para ação' },
+    { name: 'cta_link', type: 'VARCHAR(255)', required: false, description: 'Link de redirecionamento do CTA' },
+    { name: 'is_active', aliases: ['ativo'], type: 'BOOLEAN', default: true, description: 'Status de visibilidade do slide' },
+    { name: 'created_at', type: 'TIMESTAMP', description: 'Data de criação do registro' },
+    { name: 'updated_at', type: 'TIMESTAMP', description: 'Data de atualização do registro' }
+  ],
+  sample_item: {
+    id: 'as_slide_1',
+    order_index: 0,
+    ordem: 0,
+    title: 'Tecnologia no seu dia a dia e no sucesso do seu negócio.',
+    titulo: 'Tecnologia no seu dia a dia e no sucesso do seu negócio.',
+    subtitle: 'Sabemos o quanto a tecnologia é fundamental para o seu dia a dia e para o sucesso do seu negócio.',
+    subtitulo: 'Sabemos o quanto a tecnologia é fundamental para o seu dia a dia e para o sucesso do seu negócio.',
+    image_url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1920&q=80',
+    imagem: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1920&q=80',
+    focus: 'Essencialidade',
+    foco: 'Essencialidade',
+    badge: 'Foco: Essencialidade',
+    cta_text: 'Solicitar Atendimento Técnico',
+    cta_link: 'https://api.whatsapp.com/send?phone=5562982239004',
+    is_active: true,
+    ativo: true
+  }
+};
+
+// Endpoint de consulta do esquema de banco de dados dos slides
+['/api/carousel-slides/schema', '/api/slides/schema', '/api/assistance-slides/schema'].forEach(pathUrl => {
+  app.get(pathUrl, (req, res) => {
+    res.json({
+      success: true,
+      schema: CAROUSEL_DB_SCHEMA
+    });
+  });
+});
+
+// Listar todos os slides de carrossel
+['/api/carousel-slides', '/api/slides', '/api/assistance-slides'].forEach(pathUrl => {
+  app.get(pathUrl, (req, res) => {
+    try {
+      const activeOnly = req.query.active === '1' || req.query.active === 'true' || req.query.ativo === '1' || req.query.ativo === 'true';
+      const slides = getAssistanceSlides(activeOnly);
+      res.json({ success: true, slides, total: slides.length });
+    } catch (err: any) {
+      console.error('Error fetching carousel slides:', err);
+      res.status(500).json({ error: 'Erro ao buscar slides do carrossel: ' + err.message });
+    }
+  });
+});
+
+// Buscar slide por ID
+['/api/carousel-slides/:id', '/api/slides/:id', '/api/assistance-slides/:id'].forEach(pathUrl => {
+  app.get(pathUrl, (req, res) => {
+    try {
+      const slide = getAssistanceSlideById(req.params.id);
+      if (!slide) {
+        return res.status(404).json({ error: 'Slide não encontrado' });
+      }
+      res.json({ success: true, slide });
+    } catch (err: any) {
+      res.status(500).json({ error: 'Erro ao buscar slide: ' + err.message });
+    }
+  });
+});
+
+// Criar novo slide (com persistência no banco e broadcast)
+['/api/carousel-slides', '/api/slides', '/api/assistance-slides'].forEach(pathUrl => {
+  app.post(pathUrl, (req, res) => {
+    try {
+      const slide = createAssistanceSlide(req.body);
+      broadcastAssistanceSlidesUpdate(getAssistanceSlides(true), req.body.senderId);
+      res.status(201).json({ success: true, message: 'Slide criado com sucesso!', slide });
+    } catch (err: any) {
+      console.error('Error creating carousel slide:', err);
+      res.status(500).json({ error: 'Erro ao criar slide: ' + err.message });
+    }
+  });
+});
+
+// Atualizar slide existente
+['/api/carousel-slides/:id', '/api/slides/:id', '/api/assistance-slides/:id'].forEach(pathUrl => {
+  app.put(pathUrl, (req, res) => {
+    try {
+      const updated = updateAssistanceSlide(req.params.id, req.body);
+      if (!updated) {
+        return res.status(404).json({ error: 'Slide não encontrado para atualização' });
+      }
+      broadcastAssistanceSlidesUpdate(getAssistanceSlides(true), req.body.senderId);
+      res.json({ success: true, message: 'Slide atualizado com sucesso!', slide: updated });
+    } catch (err: any) {
+      console.error('Error updating carousel slide:', err);
+      res.status(500).json({ error: 'Erro ao atualizar slide: ' + err.message });
+    }
+  });
+});
+
+// Excluir slide
+['/api/carousel-slides/:id', '/api/slides/:id', '/api/assistance-slides/:id'].forEach(pathUrl => {
+  app.delete(pathUrl, (req, res) => {
+    try {
+      const success = deleteAssistanceSlide(req.params.id);
+      if (!success) {
+        return res.status(404).json({ error: 'Slide não encontrado para exclusão' });
+      }
+      broadcastAssistanceSlidesUpdate(getAssistanceSlides(true), req.body?.senderId);
+      res.json({ success: true, message: 'Slide excluído com sucesso!' });
+    } catch (err: any) {
+      console.error('Error deleting carousel slide:', err);
+      res.status(500).json({ error: 'Erro ao excluir slide: ' + err.message });
+    }
+  });
+});
+
+// Reordenar slides
+['/api/carousel-slides/reorder', '/api/slides/reorder', '/api/assistance-slides/reorder'].forEach(pathUrl => {
+  app.post(pathUrl, (req, res) => {
+    try {
+      const slideIds = req.body.slideIds || req.body.slide_ids || req.body.ids;
+      if (!Array.isArray(slideIds)) {
+        return res.status(400).json({ error: 'Array slideIds (ou slide_ids/ids) é obrigatório' });
+      }
+      reorderAssistanceSlides(slideIds);
+      broadcastAssistanceSlidesUpdate(getAssistanceSlides(true), req.body.senderId);
+      res.json({ success: true, message: 'Ordem dos slides atualizada!', slideIds });
+    } catch (err: any) {
+      console.error('Error reordering slides:', err);
+      res.status(500).json({ error: 'Erro ao reordenar slides: ' + err.message });
+    }
+  });
+});
+
+// Restaurar slides padrão
+['/api/carousel-slides/reset', '/api/slides/reset', '/api/assistance-slides/reset'].forEach(pathUrl => {
+  app.post(pathUrl, (req, res) => {
+    try {
+      const slides = resetAssistanceSlidesToDefault();
+      broadcastAssistanceSlidesUpdate(slides, req.body.senderId);
+      res.json({ success: true, message: 'Slides restaurados para o padrão original!', slides });
+    } catch (err: any) {
+      console.error('Error resetting carousel slides:', err);
+      res.status(500).json({ error: 'Erro ao restaurar slides: ' + err.message });
+    }
+  });
+});
+
+// Upload de imagem do slide (base64 ou link)
+['/api/carousel-slides/upload', '/api/slides/upload', '/api/assistance-slides/upload'].forEach(pathUrl => {
+  app.post(pathUrl, (req, res) => {
+    try {
+      const { image_data, imagem, filename } = req.body;
+      const rawData = image_data || imagem;
+      if (!rawData) {
+        return res.status(400).json({ error: 'Nenhum dado de imagem fornecido' });
+      }
+
+      // Se já for uma URL HTTP/HTTPS, apenas retorna
+      if (typeof rawData === 'string' && (rawData.startsWith('http://') || rawData.startsWith('https://'))) {
+        return res.json({ success: true, url: rawData });
+      }
+
+      // Extrai base64
+      const matches = rawData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+      if (!matches || matches.length !== 3) {
+        return res.status(400).json({ error: 'Formato base64 de imagem inválido' });
+      }
+
+      const rawExt = matches[1].split('/')[1] || 'png';
+      const ext = rawExt.includes('svg') ? 'svg' : (rawExt.includes('jpeg') ? 'jpg' : rawExt);
+      const buffer = Buffer.from(matches[2], 'base64');
+      const safeName = (filename ? filename.replace(/[^a-zA-Z0-9_-]/g, '_') : 'slide') + '_' + Date.now() + '.' + ext;
+      const filePath = path.join(UPLOADS_DIR, safeName);
+
+      fs.writeFileSync(filePath, buffer);
+      const publicUrl = `/uploads/${safeName}`;
+
+      res.json({
+        success: true,
+        message: 'Upload de imagem concluído com sucesso!',
+        url: publicUrl
+      });
+    } catch (err: any) {
+      console.error('Error uploading slide image:', err);
+      res.status(500).json({ error: 'Erro ao realizar upload da imagem: ' + err.message });
+    }
+  });
 });
 
 // -------------------------------------------------------------

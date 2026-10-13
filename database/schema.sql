@@ -184,3 +184,43 @@ CREATE TABLE IF NOT EXISTS user_permissions (
     FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE,
     FOREIGN KEY (scope_id) REFERENCES scopes(id) ON DELETE CASCADE
 );
+
+-- 12. TABELA DE SLIDES DO CARROSSEL (CAROUSEL & ASSISTÊNCIA TÉCNICA)
+-- Persistência de slides com imagem, título, subtítulo e ordem de exibição
+CREATE TABLE IF NOT EXISTS carousel_slides (
+    id VARCHAR(64) PRIMARY KEY,                  -- Identificador único do slide (ex: 'slide_01')
+    image_url TEXT NOT NULL,                     -- URL ou Data URI da imagem do slide
+    title VARCHAR(255) NOT NULL,                 -- Título principal do slide
+    subtitle TEXT,                               -- Subtítulo ou descrição detalhada do slide
+    order_index INT DEFAULT 0,                   -- Ordem sequencial de exibição no carrossel
+    focus VARCHAR(100) DEFAULT 'Institucional',  -- Área de foco (ex: 'Essencialidade', 'Infraestrutura')
+    badge VARCHAR(100),                          -- Selo ou tag destacada no card
+    cta_text VARCHAR(100) DEFAULT 'Saiba Mais',  -- Texto do botão de ação
+    cta_link VARCHAR(255),                       -- Link de direcionamento (ex: WhatsApp, URL)
+    is_active BOOLEAN DEFAULT TRUE,              -- Slide visível ou oculto
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_carousel_slides_order ON carousel_slides(order_index);
+CREATE INDEX IF NOT EXISTS idx_carousel_slides_active ON carousel_slides(is_active);
+
+-- Alias / compatibilidade com a tabela assistance_slides
+CREATE TABLE IF NOT EXISTS assistance_slides (
+    id VARCHAR(64) PRIMARY KEY,
+    order_index INT DEFAULT 0,
+    focus VARCHAR(100) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL,
+    image_url TEXT NOT NULL,
+    badge VARCHAR(100),
+    cta_text VARCHAR(100),
+    cta_link VARCHAR(255),
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_assistance_slides_order ON assistance_slides(order_index);
+CREATE INDEX IF NOT EXISTS idx_assistance_slides_active ON assistance_slides(is_active);
+

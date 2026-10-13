@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { WebsiteConfig, HeroSlide, SystemSettings } from '../types.ts';
+import { WebsiteConfig, HeroSlide, AssistanceSlide, SystemSettings } from '../types.ts';
 
 export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
   {
@@ -28,6 +28,69 @@ export const DEFAULT_HERO_SLIDES: HeroSlide[] = [
   }
 ];
 
+export const DEFAULT_ASSISTANCE_SLIDES: AssistanceSlide[] = [
+  {
+    id: 'as_slide_1',
+    order_index: 0,
+    focus: 'Essencialidade',
+    badge: 'Foco: Essencialidade',
+    title: 'Tecnologia no seu dia a dia e no sucesso do seu negócio.',
+    description: 'Sabemos o quanto a tecnologia é fundamental para o seu dia a dia e para o sucesso do seu negócio. Atendimento ágil e consultoria técnica especializada para empresas em Goiânia.',
+    image_url: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1920&q=80',
+    cta_text: 'Solicitar Atendimento Técnico',
+    cta_link: 'https://api.whatsapp.com/send?phone=5562982239004&text=Ol%C3%A1!%20Gostaria%20de%20solicitar%20atendimento%20t%C3%A9cnico%20para%20minha%20empresa%20em%20Goi%C3%A2nia.',
+    is_active: true
+  },
+  {
+    id: 'as_slide_2',
+    order_index: 1,
+    focus: 'Infraestrutura',
+    badge: 'Foco: Infraestrutura',
+    title: 'Laboratório próprio de última geração em Goiânia com especialistas qualificados.',
+    description: 'Contamos com laboratório próprio de última geração em Goiânia com bancadas antiestáticas (ESD), instrumentação de precisão e engenheiros certificados.',
+    image_url: 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=1920&q=80',
+    cta_text: 'Conhecer Nosso Laboratório',
+    cta_link: 'https://api.whatsapp.com/send?phone=5562982239004&text=Ol%C3%A1!%20Gostaria%20de%20conhecer%20a%20estrutura%20do%20laborat%C3%B3rio%20pr%C3%B3prio%20em%20Goi%C3%A2nia.',
+    is_active: true
+  },
+  {
+    id: 'as_slide_3',
+    order_index: 2,
+    focus: 'Complexidade',
+    badge: 'Foco: Complexidade',
+    title: 'Resolução desde problemas simples de lentidão até os reparos eletrônicos mais complexos.',
+    description: 'Resolvemos desde problemas operacionais simples de lentidão e formatação até microeletrônica avançada, recuperação de placas-mãe e reparos em servidores.',
+    image_url: 'https://images.unsplash.com/photo-1597733336794-12d05021d510?auto=format&fit=crop&w=1920&q=80',
+    cta_text: 'Avaliar Reparo Complexo',
+    cta_link: 'https://api.whatsapp.com/send?phone=5562982239004&text=Ol%C3%A1!%20Preciso%20de%20um%20reparo%20t%C3%A9cnico%20eletr%C3%B4nico%20complexo%20para%20meu%20equipamento.',
+    is_active: true
+  },
+  {
+    id: 'as_slide_4',
+    order_index: 3,
+    focus: 'Confiança',
+    badge: 'Foco: Confiança',
+    title: 'Peças de alta qualidade, garantia em todos os serviços e total transparência no diagnóstico.',
+    description: 'Trabalhamos com componentes originais e homologados, laudos técnicos detalhados com fotos e garantia formal em todos os procedimentos executados.',
+    image_url: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1920&q=80',
+    cta_text: 'Diagnóstico com Garantia',
+    cta_link: 'https://api.whatsapp.com/send?phone=5562982239004&text=Ol%C3%A1!%20Gostaria%20de%20um%20diagn%C3%B3stico%20transparente%20com%20garantia%20para%20minha%20empresa.',
+    is_active: true
+  },
+  {
+    id: 'as_slide_5',
+    order_index: 4,
+    focus: 'Chamada para Ação',
+    badge: 'Foco: Chamada para Ação',
+    title: 'Deixe a tecnologia com quem entende e tenha a tranquilidade que você merece!',
+    description: 'Deixe a tecnologia com quem entende e tenha a tranquilidade que você merece! Nossa equipe em Goiânia cuida de toda a infraestrutura técnica com agilidade.',
+    image_url: 'https://images.unsplash.com/photo-1581092335397-9583fe92d232?auto=format&fit=crop&w=1920&q=80',
+    cta_text: 'Falar com Especialista via WhatsApp',
+    cta_link: 'https://api.whatsapp.com/send?phone=5562982239004&text=Ol%C3%A1!%20Quero%20falar%20com%20um%20especialista%20da%20W3W%20em%20Goi%C3%A2nia.',
+    is_active: true
+  }
+];
+
 export const DEFAULT_WEBSITE_CONFIG: WebsiteConfig = {
   diagnostic_tag: 'DIAGNÓSTICO CORPORATIVO GRATUITO',
   diagnostic_location: 'Goiânia e Região Metropolitana',
@@ -36,7 +99,8 @@ export const DEFAULT_WEBSITE_CONFIG: WebsiteConfig = {
   contact_phone: '(62) 3923 - 0404 • (62) 9 8223 - 9004',
   contact_whatsapp: '5562982239004',
   contact_email: 'comercial@w3wsolucoesti.com.br',
-  slides: DEFAULT_HERO_SLIDES
+  slides: DEFAULT_HERO_SLIDES,
+  assistance_slides: DEFAULT_ASSISTANCE_SLIDES
 };
 
 export type SyncStatus = 'connected' | 'syncing' | 'synced' | 'error' | 'offline';
@@ -192,6 +256,9 @@ class CmsSyncManager {
               // Se tiver configuração do servidor, funde com segurança
               this.applyExternalUpdate(data.website_config, 'sse_init');
             }
+            if (data.assistance_slides && Array.isArray(data.assistance_slides)) {
+              this.setAssistanceSlides(data.assistance_slides, false);
+            }
             if (data.activeClients) {
               this.syncState.activeClientsCount = data.activeClients;
               this.notify();
@@ -199,6 +266,10 @@ class CmsSyncManager {
           } else if (data.type === 'cms_config_updated' || data.type === 'website_config_updated') {
             if (data.website_config && data.senderId !== this.clientId) {
               this.applyExternalUpdate(data.website_config, 'sse');
+            }
+          } else if (data.type === 'assistance_slides_updated' && Array.isArray(data.assistance_slides)) {
+            if (data.senderId !== this.clientId) {
+              this.setAssistanceSlides(data.assistance_slides, false);
             }
           }
         } catch (e) {}
@@ -223,7 +294,10 @@ class CmsSyncManager {
     const merged: WebsiteConfig = {
       ...this.config,
       ...incoming,
-      slides: (incoming.slides && incoming.slides.length > 0) ? incoming.slides : this.config.slides
+      slides: (incoming.slides && incoming.slides.length > 0) ? incoming.slides : this.config.slides,
+      assistance_slides: (incoming.assistance_slides && incoming.assistance_slides.length > 0)
+        ? incoming.assistance_slides
+        : (this.config.assistance_slides || DEFAULT_ASSISTANCE_SLIDES)
     };
 
     this.config = merged;
@@ -365,6 +439,50 @@ class CmsSyncManager {
     return true;
   }
 
+  public updateAssistanceSlide(index: number, field: keyof AssistanceSlide, value: any) {
+    const current = [...(this.config.assistance_slides || DEFAULT_ASSISTANCE_SLIDES)];
+    if (index >= 0 && index < current.length) {
+      current[index] = {
+        ...current[index],
+        [field]: value
+      };
+      this.updateConfig({ assistance_slides: current });
+    }
+  }
+
+  public addAssistanceSlide(custom?: Partial<AssistanceSlide>) {
+    const current = [...(this.config.assistance_slides || DEFAULT_ASSISTANCE_SLIDES)];
+    const newSlide: AssistanceSlide = {
+      id: `as_slide_${Date.now()}`,
+      order_index: current.length,
+      focus: custom?.focus || 'Especialidade',
+      badge: custom?.badge || `Foco: ${custom?.focus || 'Especialidade'}`,
+      title: custom?.title || 'Novo Diferencial Técnico W3W',
+      description: custom?.description || 'Descrição detalhada do diferencial de atendimento ou infraestrutura técnica em Goiânia.',
+      image_url: custom?.image_url || 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1920&q=80',
+      cta_text: custom?.cta_text || 'Falar no WhatsApp',
+      cta_link: custom?.cta_link || 'https://api.whatsapp.com/send?phone=5562982239004',
+      is_active: true
+    };
+    current.push(newSlide);
+    this.updateConfig({ assistance_slides: current });
+    return current.length - 1;
+  }
+
+  public removeAssistanceSlide(index: number): boolean {
+    const current = [...(this.config.assistance_slides || DEFAULT_ASSISTANCE_SLIDES)];
+    if (current.length <= 1) {
+      return false;
+    }
+    const filtered = current.filter((_, i) => i !== index);
+    this.updateConfig({ assistance_slides: filtered });
+    return true;
+  }
+
+  public setAssistanceSlides(slides: AssistanceSlide[], notifyServer = true) {
+    this.updateConfig({ assistance_slides: slides }, notifyServer);
+  }
+
   public resetToDefaults() {
     this.updateConfig(DEFAULT_WEBSITE_CONFIG, true);
   }
@@ -490,6 +608,14 @@ export function useCMSSync() {
       cmsSyncManager.addSlide(customSlide),
     removeSlide: (index: number) =>
       cmsSyncManager.removeSlide(index),
+    updateAssistanceSlide: (index: number, field: keyof AssistanceSlide, value: any) =>
+      cmsSyncManager.updateAssistanceSlide(index, field, value),
+    addAssistanceSlide: (custom?: Partial<AssistanceSlide>) =>
+      cmsSyncManager.addAssistanceSlide(custom),
+    removeAssistanceSlide: (index: number) =>
+      cmsSyncManager.removeAssistanceSlide(index),
+    setAssistanceSlides: (slides: AssistanceSlide[], notifyServer?: boolean) =>
+      cmsSyncManager.setAssistanceSlides(slides, notifyServer),
     resetToDefaults: () =>
       cmsSyncManager.resetToDefaults(),
     saveToServer: (settings?: SystemSettings) =>
