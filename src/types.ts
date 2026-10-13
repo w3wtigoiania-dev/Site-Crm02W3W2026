@@ -56,7 +56,7 @@ export interface Machine {
   client_company?: string;
   sector: string;
   location: string;
-  status: 'Ativo' | 'Em Manutenção' | 'Desativado' | 'Reserva';
+  status: 'Ativo' | 'Em Manutenção' | 'Desativado' | 'Reserva' | string;
   asset_tag: string;
   purchase_date: string;
   warranty_end: string;
@@ -141,6 +141,44 @@ export interface ScheduledMaintenanceRecord {
   notes?: string;
   status?: 'Agendada' | 'Em Andamento' | 'Concluída' | 'Cancelada';
   created_at?: string;
+}
+
+export type StatusSituationType =
+  | 'operacional'
+  | 'manutencao'
+  | 'analise'
+  | 'pendencia'
+  | 'concluido'
+  | 'inativo'
+  | 'reserva'
+  | 'seguranca'
+  | 'geral';
+
+export interface EquipmentStatus {
+  id: string;
+  name: string;
+  color: string; // 'emerald' | 'amber' | 'blue' | 'rose' | 'purple' | 'yellow' | 'cyan' | 'teal' | 'indigo' | 'slate' | 'red'
+  hex_color: string;
+  bg_class?: string;
+  situation_type: StatusSituationType;
+  description: string;
+  requires_password: boolean;
+  is_default: boolean;
+  order_index: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface EquipmentStatusLog {
+  id: string;
+  machine_id: string;
+  hostname?: string;
+  previous_status?: string;
+  new_status: string;
+  reason?: string;
+  authorized_by: string;
+  created_at: string;
 }
 
 export interface HeroSlide {

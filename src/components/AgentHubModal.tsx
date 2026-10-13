@@ -643,8 +643,14 @@ echo "[OK] Reporte enviado para $CLIENT_COMPANY!"`;
                     >
                       <option value="Ativo">Ativo (Em Operação)</option>
                       <option value="Em Manutenção">Em Manutenção</option>
+                      <option value="Aguardando Peça">Aguardando Peça</option>
+                      <option value="Em Diagnóstico">Em Diagnóstico</option>
+                      <option value="Aguardando Aprovação">Aguardando Aprovação</option>
+                      <option value="Pronto / Liberado">Pronto / Liberado</option>
+                      <option value="Garantia / RMA">Garantia / RMA</option>
                       <option value="Reserva">Reserva Técnica</option>
                       <option value="Desativado">Desativado</option>
+                      <option value="Quarentena / Bloqueado">Quarentena / Bloqueado</option>
                     </select>
                   </div>
                 </div>

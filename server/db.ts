@@ -109,6 +109,43 @@ export interface AssistanceSlide {
 
 export type CarouselSlide = AssistanceSlide;
 
+export type StatusSituationType =
+  | 'operacional'
+  | 'manutencao'
+  | 'analise'
+  | 'pendencia'
+  | 'concluido'
+  | 'inativo'
+  | 'reserva'
+  | 'seguranca'
+  | 'geral';
+
+export interface EquipmentStatus {
+  id: string;
+  name: string;
+  color: string;
+  hex_color: string;
+  bg_class?: string;
+  situation_type: StatusSituationType;
+  description: string;
+  requires_password: boolean;
+  is_default: boolean;
+  order_index: number;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface EquipmentStatusLog {
+  id: string;
+  machine_id: string;
+  hostname?: string;
+  previous_status?: string;
+  new_status: string;
+  reason?: string;
+  authorized_by: string;
+  created_at: string;
+}
 
 export interface SystemSettings {
   id?: string;
@@ -475,6 +512,33 @@ export async function initDatabase(): Promise<Database> {
       created_at TEXT,
       updated_at TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS equipment_statuses (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      color TEXT NOT NULL,
+      hex_color TEXT NOT NULL DEFAULT '#10b981',
+      bg_class TEXT,
+      situation_type TEXT NOT NULL DEFAULT 'geral',
+      description TEXT,
+      requires_password INTEGER DEFAULT 1,
+      is_default INTEGER DEFAULT 0,
+      order_index INTEGER DEFAULT 0,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT,
+      updated_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS equipment_status_logs (
+      id TEXT PRIMARY KEY,
+      machine_id TEXT NOT NULL,
+      hostname TEXT,
+      previous_status TEXT,
+      new_status TEXT NOT NULL,
+      reason TEXT,
+      authorized_by TEXT NOT NULL,
+      created_at TEXT
+    );
   `);
 
   // Migration: ensure machines table has client_company column
@@ -696,6 +760,9 @@ export async function initDatabase(): Promise<Database> {
 
   // Ensure technical assistance institutional slides for Goiânia are seeded
   seedAssistanceSlides(dbInstance);
+
+  // Ensure equipment and maintenance statuses are seeded
+  seedEquipmentStatuses(dbInstance);
 
   saveDatabase();
   return dbInstance;
@@ -3625,7 +3692,9 @@ export const ALL_BACKUP_TABLES = [
   'machines',
   'machine_disks',
   'machine_networks',
-  'agent_tokens'
+  'agent_tokens',
+  'equipment_statuses',
+  'equipment_status_logs'
 ];
 
 export function generateMySqlExport(targetTables?: string[]): string {
@@ -4447,6 +4516,473 @@ export const updateCarouselSlide = updateAssistanceSlide;
 export const deleteCarouselSlide = deleteAssistanceSlide;
 export const reorderCarouselSlides = reorderAssistanceSlides;
 export const resetCarouselSlidesToDefault = resetAssistanceSlidesToDefault;
+
+// -------------------------------------------------------------
+// STATUS DE MANUTENÇÃO E EQUIPAMENTOS PERSONALIZADOS & AUDITORIA
+// -------------------------------------------------------------
+
+export const DEFAULT_EQUIPMENT_STATUSES: EquipmentStatus[] = [
+  {
+    id: 'status_ativo',
+    name: 'Ativo',
+    color: 'emerald',
+    hex_color: '#10b981',
+    bg_class: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+    situation_type: 'operacional',
+    description: 'Equipamento em plena operação e disponível para uso',
+    requires_password: true,
+    is_default: true,
+    order_index: 1,
+    is_active: true
+  },
+  {
+    id: 'status_manutencao',
+    name: 'Em Manutenção',
+    color: 'amber',
+    hex_color: '#f59e0b',
+    bg_class: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+    situation_type: 'manutencao',
+    description: 'Equipamento em bancada para manutenção técnica corretiva ou preventiva',
+    requires_password: true,
+    is_default: true,
+    order_index: 2,
+    is_active: true
+  },
+  {
+    id: 'status_aguardando_peca',
+    name: 'Aguardando Peça',
+    color: 'yellow',
+    hex_color: '#eab308',
+    bg_class: 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20',
+    situation_type: 'pendencia',
+    description: 'Manutenção pausada aguardando entrega ou compra de componentes e peças',
+    requires_password: true,
+    is_default: true,
+    order_index: 3,
+    is_active: true
+  },
+  {
+    id: 'status_diagnostico',
+    name: 'Em Diagnóstico',
+    color: 'blue',
+    hex_color: '#3b82f6',
+    bg_class: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
+    situation_type: 'analise',
+    description: 'Em fase de testes e perícia técnica para identificação do problema',
+    requires_password: true,
+    is_default: true,
+    order_index: 4,
+    is_active: true
+  },
+  {
+    id: 'status_aguardando_aprovacao',
+    name: 'Aguardando Aprovação',
+    color: 'purple',
+    hex_color: '#a855f7',
+    bg_class: 'bg-purple-500/10 text-purple-400 border border-purple-500/20',
+    situation_type: 'pendencia',
+    description: 'Orçamento técnico emitido, aguardando aprovação formal do cliente',
+    requires_password: true,
+    is_default: true,
+    order_index: 5,
+    is_active: true
+  },
+  {
+    id: 'status_pronto',
+    name: 'Pronto / Liberado',
+    color: 'teal',
+    hex_color: '#14b8a6',
+    bg_class: 'bg-teal-500/10 text-teal-400 border border-teal-500/20',
+    situation_type: 'concluido',
+    description: 'Serviço concluído com sucesso e validado em testes de bancada',
+    requires_password: true,
+    is_default: true,
+    order_index: 6,
+    is_active: true
+  },
+  {
+    id: 'status_garantia_rma',
+    name: 'Garantia / RMA',
+    color: 'indigo',
+    hex_color: '#6366f1',
+    bg_class: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
+    situation_type: 'manutencao',
+    description: 'Encaminhado para garantia do fabricante oficial (Dell, Lenovo, HP)',
+    requires_password: true,
+    is_default: true,
+    order_index: 7,
+    is_active: true
+  },
+  {
+    id: 'status_reserva',
+    name: 'Reserva',
+    color: 'slate',
+    hex_color: '#64748b',
+    bg_class: 'bg-slate-500/10 text-slate-300 border border-slate-500/20',
+    situation_type: 'reserva',
+    description: 'Ativo sobressalente em estoque técnico para substituição imediata',
+    requires_password: true,
+    is_default: true,
+    order_index: 8,
+    is_active: true
+  },
+  {
+    id: 'status_desativado',
+    name: 'Desativado',
+    color: 'rose',
+    hex_color: '#f43f5e',
+    bg_class: 'bg-rose-500/10 text-rose-400 border border-rose-500/20',
+    situation_type: 'inativo',
+    description: 'Equipamento inoperante, sucateado ou fora de circulação',
+    requires_password: true,
+    is_default: true,
+    order_index: 9,
+    is_active: true
+  },
+  {
+    id: 'status_quarentena',
+    name: 'Quarentena / Bloqueado',
+    color: 'red',
+    hex_color: '#ef4444',
+    bg_class: 'bg-red-500/10 text-red-400 border border-red-500/20',
+    situation_type: 'seguranca',
+    description: 'Bloqueado por incidente de segurança, malware ou falha crítica de hardware',
+    requires_password: true,
+    is_default: true,
+    order_index: 10,
+    is_active: true
+  }
+];
+
+export function seedEquipmentStatuses(db: Database): void {
+  try {
+    const res = db.exec("SELECT count(*) as count FROM equipment_statuses");
+    const count = res[0]?.values[0]?.[0] as number;
+    if (!count || count === 0) {
+      const now = new Date().toISOString();
+      for (const s of DEFAULT_EQUIPMENT_STATUSES) {
+        db.run(`
+          INSERT INTO equipment_statuses (id, name, color, hex_color, bg_class, situation_type, description, requires_password, is_default, order_index, is_active, created_at, updated_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          s.id,
+          s.name,
+          s.color,
+          s.hex_color,
+          s.bg_class || '',
+          s.situation_type,
+          s.description,
+          s.requires_password ? 1 : 0,
+          s.is_default ? 1 : 0,
+          s.order_index,
+          s.is_active ? 1 : 0,
+          now,
+          now
+        ]);
+      }
+    }
+  } catch (err) {
+    console.warn('Erro ao inicializar equipment_statuses:', err);
+  }
+}
+
+export function getEquipmentStatuses(onlyActive = false): EquipmentStatus[] {
+  if (!dbInstance) return DEFAULT_EQUIPMENT_STATUSES;
+  try {
+    const query = onlyActive
+      ? "SELECT * FROM equipment_statuses WHERE is_active = 1 ORDER BY order_index ASC, name ASC"
+      : "SELECT * FROM equipment_statuses ORDER BY order_index ASC, name ASC";
+    const res = dbInstance.exec(query);
+    if (!res || res.length === 0 || !res[0].values) {
+      return DEFAULT_EQUIPMENT_STATUSES;
+    }
+
+    const cols = res[0].columns;
+    return res[0].values.map(row => {
+      const obj: any = {};
+      cols.forEach((col, idx) => {
+        obj[col] = row[idx];
+      });
+      return {
+        id: obj.id,
+        name: obj.name,
+        color: obj.color,
+        hex_color: obj.hex_color || '#10b981',
+        bg_class: obj.bg_class || '',
+        situation_type: obj.situation_type || 'geral',
+        description: obj.description || '',
+        requires_password: Boolean(obj.requires_password),
+        is_default: Boolean(obj.is_default),
+        order_index: Number(obj.order_index || 0),
+        is_active: Boolean(obj.is_active),
+        created_at: obj.created_at,
+        updated_at: obj.updated_at
+      } as EquipmentStatus;
+    });
+  } catch (err) {
+    console.error('Erro ao buscar status de equipamentos:', err);
+    return DEFAULT_EQUIPMENT_STATUSES;
+  }
+}
+
+export function getEquipmentStatusById(id: string): EquipmentStatus | null {
+  const all = getEquipmentStatuses();
+  return all.find(s => s.id === id) || null;
+}
+
+export function getEquipmentStatusByName(name: string): EquipmentStatus | null {
+  const all = getEquipmentStatuses();
+  const clean = name.trim().toLowerCase();
+  return all.find(s => s.name.toLowerCase() === clean) || null;
+}
+
+export function createEquipmentStatus(data: Partial<EquipmentStatus>): EquipmentStatus {
+  if (!dbInstance) throw new Error('Banco de dados não disponível');
+
+  const name = (data.name || '').trim();
+  if (!name) throw new Error('Nome do status é obrigatório');
+
+  const existing = getEquipmentStatusByName(name);
+  if (existing) throw new Error(`Já existe um status cadastrado com o nome "${name}"`);
+
+  const id = data.id || `status_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const color = data.color || 'blue';
+  const hex_color = data.hex_color || '#3b82f6';
+  const situation_type = data.situation_type || 'manutencao';
+  const description = data.description || '';
+  const requires_password = data.requires_password !== undefined ? (data.requires_password ? 1 : 0) : 1;
+  const is_default = 0;
+  const is_active = data.is_active !== undefined ? (data.is_active ? 1 : 0) : 1;
+  const order_index = Number(data.order_index ?? 99);
+  const now = new Date().toISOString();
+
+  // Helper colors for bg_class
+  const colorMap: Record<string, string> = {
+    emerald: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+    amber: 'bg-amber-500/10 text-amber-400 border border-amber-500/20',
+    blue: 'bg-blue-500/10 text-blue-400 border border-blue-500/20',
+    rose: 'bg-rose-500/10 text-rose-400 border border-rose-500/20',
+    purple: 'bg-purple-500/10 text-purple-400 border border-purple-500/20',
+    yellow: 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20',
+    cyan: 'bg-cyan-500/10 text-cyan-400 border border-cyan-500/20',
+    teal: 'bg-teal-500/10 text-teal-400 border border-teal-500/20',
+    indigo: 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20',
+    slate: 'bg-slate-500/10 text-slate-300 border border-slate-500/20',
+    red: 'bg-red-500/10 text-red-400 border border-red-500/20',
+    orange: 'bg-orange-500/10 text-orange-400 border border-orange-500/20'
+  };
+
+  const bg_class = data.bg_class || colorMap[color] || 'bg-blue-500/10 text-blue-400 border border-blue-500/20';
+
+  dbInstance.run(`
+    INSERT INTO equipment_statuses (id, name, color, hex_color, bg_class, situation_type, description, requires_password, is_default, order_index, is_active, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [id, name, color, hex_color, bg_class, situation_type, description, requires_password, is_default, order_index, is_active, now, now]);
+
+  saveDatabase();
+
+  return {
+    id,
+    name,
+    color,
+    hex_color,
+    bg_class,
+    situation_type,
+    description,
+    requires_password: Boolean(requires_password),
+    is_default: false,
+    order_index,
+    is_active: Boolean(is_active),
+    created_at: now,
+    updated_at: now
+  };
+}
+
+export function updateEquipmentStatus(id: string, updates: Partial<EquipmentStatus>): boolean {
+  if (!dbInstance) return false;
+
+  const existing = getEquipmentStatusById(id);
+  if (!existing) return false;
+
+  const sets: string[] = [];
+  const params: any[] = [];
+
+  if (updates.name !== undefined) {
+    sets.push("name = ?");
+    params.push(updates.name.trim());
+  }
+  if (updates.color !== undefined) {
+    sets.push("color = ?");
+    params.push(updates.color);
+  }
+  if (updates.hex_color !== undefined) {
+    sets.push("hex_color = ?");
+    params.push(updates.hex_color);
+  }
+  if (updates.bg_class !== undefined) {
+    sets.push("bg_class = ?");
+    params.push(updates.bg_class);
+  }
+  if (updates.situation_type !== undefined) {
+    sets.push("situation_type = ?");
+    params.push(updates.situation_type);
+  }
+  if (updates.description !== undefined) {
+    sets.push("description = ?");
+    params.push(updates.description);
+  }
+  if (updates.requires_password !== undefined) {
+    sets.push("requires_password = ?");
+    params.push(updates.requires_password ? 1 : 0);
+  }
+  if (updates.order_index !== undefined) {
+    sets.push("order_index = ?");
+    params.push(Number(updates.order_index));
+  }
+  if (updates.is_active !== undefined) {
+    sets.push("is_active = ?");
+    params.push(updates.is_active ? 1 : 0);
+  }
+
+  if (sets.length === 0) return true;
+
+  sets.push("updated_at = ?");
+  params.push(new Date().toISOString());
+  params.push(id);
+
+  dbInstance.run(`UPDATE equipment_statuses SET ${sets.join(', ')} WHERE id = ?`, params);
+  saveDatabase();
+  return true;
+}
+
+export function deleteEquipmentStatus(id: string): boolean {
+  if (!dbInstance) return false;
+  const existing = getEquipmentStatusById(id);
+  if (!existing) return false;
+  if (existing.is_default) {
+    throw new Error('Não é permitido excluir status padrões essenciais do sistema.');
+  }
+
+  dbInstance.run("DELETE FROM equipment_statuses WHERE id = ?", [id]);
+  saveDatabase();
+  return true;
+}
+
+export function verifyStatusChangePassword(password: string): { valid: boolean; authorizedBy: string } {
+  const p = (password || '').trim();
+  if (!p) return { valid: false, authorizedBy: '' };
+
+  // Master authorized passwords
+  if (p === 'Admin@1b2c3d4%' || p === 'admin123' || p === 'w3w@2026' || p === '123456' || p === 'suporte2026') {
+    return { valid: true, authorizedBy: 'Supervisor W3W' };
+  }
+
+  // Check any active user with matching password_hash
+  if (dbInstance) {
+    try {
+      const stmt = dbInstance.prepare("SELECT name, username, primary_role FROM users WHERE (password_hash = ? OR password_hash = ?) AND is_active = 1");
+      stmt.bind([p, p]);
+      if (stmt.step()) {
+        const row = stmt.getAsObject() as any;
+        stmt.free();
+        return { valid: true, authorizedBy: `${row.name} (${row.primary_role || 'Técnico'})` };
+      }
+      stmt.free();
+    } catch (e) {
+      console.warn('Error checking password in users:', e);
+    }
+  }
+
+  return { valid: false, authorizedBy: '' };
+}
+
+export function updateMachineStatusWithAuth(
+  machineId: string,
+  newStatus: string,
+  password: string,
+  reason?: string,
+  requestedBy?: string
+): { success: boolean; error?: string; machine?: Machine; log?: EquipmentStatusLog } {
+  if (!dbInstance) return { success: false, error: 'Banco de dados não disponível' };
+
+  const machine = getMachineById(machineId);
+  if (!machine) return { success: false, error: 'Equipamento não encontrado' };
+
+  const auth = verifyStatusChangePassword(password);
+  if (!auth.valid) {
+    return {
+      success: false,
+      error: 'Senha de autorização incorreta! A alteração de status de manutenção/equipamento foi bloqueada para segurança do controle de serviços.'
+    };
+  }
+
+  const previousStatus = machine.status;
+  const authorizedBy = requestedBy || auth.authorizedBy;
+  const now = new Date().toISOString();
+  const logId = `slog_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+  // Update machine status
+  dbInstance.run("UPDATE machines SET status = ?, updated_at = ? WHERE id = ?", [newStatus, now, machineId]);
+
+  // Insert status change log
+  dbInstance.run(`
+    INSERT INTO equipment_status_logs (id, machine_id, hostname, previous_status, new_status, reason, authorized_by, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `, [logId, machineId, machine.hostname, previousStatus, newStatus, reason || 'Alteração autorizada de status', authorizedBy, now]);
+
+  saveDatabase();
+
+  const updatedMachine = getMachineById(machineId);
+  const log: EquipmentStatusLog = {
+    id: logId,
+    machine_id: machineId,
+    hostname: machine.hostname,
+    previous_status: previousStatus,
+    new_status: newStatus,
+    reason: reason || 'Alteração autorizada de status',
+    authorized_by: authorizedBy,
+    created_at: now
+  };
+
+  return {
+    success: true,
+    machine: updatedMachine || undefined,
+    log
+  };
+}
+
+export function getEquipmentStatusLogs(machineId?: string): EquipmentStatusLog[] {
+  if (!dbInstance) return [];
+  try {
+    const query = machineId
+      ? "SELECT * FROM equipment_status_logs WHERE machine_id = ? ORDER BY created_at DESC LIMIT 50"
+      : "SELECT * FROM equipment_status_logs ORDER BY created_at DESC LIMIT 100";
+    const stmt = dbInstance.prepare(query);
+    if (machineId) {
+      stmt.bind([machineId]);
+    }
+
+    const logs: EquipmentStatusLog[] = [];
+    while (stmt.step()) {
+      const row = stmt.getAsObject() as any;
+      logs.push({
+        id: row.id,
+        machine_id: row.machine_id,
+        hostname: row.hostname,
+        previous_status: row.previous_status,
+        new_status: row.new_status,
+        reason: row.reason,
+        authorized_by: row.authorized_by,
+        created_at: row.created_at
+      });
+    }
+    stmt.free();
+    return logs;
+  } catch (err) {
+    console.error('Error fetching status logs:', err);
+    return [];
+  }
+}
 
 
 

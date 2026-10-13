@@ -300,6 +300,13 @@ class CmsSyncManager {
         : (this.config.assistance_slides || DEFAULT_ASSISTANCE_SLIDES)
     };
 
+    // Previne loops infinitos de re-render caso a configuração seja idêntica
+    try {
+      if (JSON.stringify(this.config) === JSON.stringify(merged)) {
+        return;
+      }
+    } catch (e) {}
+
     this.config = merged;
     this.syncState = {
       ...this.syncState,

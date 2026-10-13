@@ -5,7 +5,7 @@ import { CalendarEvent } from '../components/MaintenanceCalendar.tsx';
  * Utilitário profissional de impressão direta com formatação A4 para Inventário, Calendário e Financeiro PJ.
  * Utiliza iframe oculto com auto-impressão sem desconfigurar o layout ou acionar bloqueadores de popup.
  */
-function printDocument(title: string, htmlBody: string, orientation: 'portrait' | 'landscape' = 'portrait') {
+export function printDocument(title: string, htmlBody: string, orientation: 'portrait' | 'landscape' = 'portrait') {
   const iframe = document.createElement('iframe');
   iframe.style.position = 'fixed';
   iframe.style.right = '0';

@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
-import { Machine, FilterState, SystemSettings, ClientCompany } from '../types.ts';
+import React, { useState, useEffect } from 'react';
+import { Machine, FilterState, SystemSettings, ClientCompany, EquipmentStatus } from '../types.ts';
 import { PhysicalAuditModal } from './PhysicalAuditModal.tsx';
 import { exportMachinesToCSV, exportMachinesToPDF } from '../utils/exportUtils.ts';
 import { printInventoryReport } from '../utils/printUtils.ts';
+import { StatusBadge } from '../utils/statusUtils.tsx';
+import { StatusChangePasswordModal } from './StatusChangePasswordModal.tsx';
+import { StatusManagementModal } from './StatusManagementModal.tsx';
 import {
   Search,
   Filter,
@@ -33,7 +36,10 @@ import {
   Table,
   SlidersHorizontal,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Lock,
+  Palette,
+  Tag
 } from 'lucide-react';
 
 interface MachineListProps {
@@ -41,11 +47,13 @@ interface MachineListProps {
   filters: FilterState;
   settings?: SystemSettings;
   companies?: ClientCompany[];
+  currentUser?: { name?: string; role?: string } | null;
   onFilterChange: (newFilters: FilterState) => void;
   onSelectMachine: (machine: Machine) => void;
   onEditMachine: (machine: Machine) => void;
   onDeleteMachine: (id: string, hostname: string) => void;
   onOpenAddDevice?: (method?: 'manual' | 'agent') => void;
+  onRefreshMachines?: () => void;
 }
 
 export const MachineList: React.FC<MachineListProps> = ({
@@ -53,16 +61,40 @@ export const MachineList: React.FC<MachineListProps> = ({
   filters,
   settings,
   companies = [],
+  currentUser,
   onFilterChange,
   onSelectMachine,
   onEditMachine,
   onDeleteMachine,
-  onOpenAddDevice
+  onOpenAddDevice,
+  onRefreshMachines
 }) => {
   const [copiedMac, setCopiedMac] = useState<string | null>(null);
   const [isAuditModalOpen, setIsAuditModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState<'auto' | 'cards' | 'table'>('auto');
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+
+  // Statuses e Segurança com Senha
+  const [customStatuses, setCustomStatuses] = useState<EquipmentStatus[]>([]);
+  const [isStatusManageModalOpen, setIsStatusManageModalOpen] = useState(false);
+  const [passwordTargetMachine, setPasswordTargetMachine] = useState<Machine | null>(null);
+  const [passwordTargetStatus, setPasswordTargetStatus] = useState<string>('');
+
+  const fetchStatuses = async () => {
+    try {
+      const res = await fetch('/api/equipment-statuses');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.statuses) setCustomStatuses(data.statuses);
+      }
+    } catch (e) {
+      console.warn('Erro ao buscar status em MachineList:', e);
+    }
+  };
+
+  useEffect(() => {
+    fetchStatuses();
+  }, []);
 
   const activeFiltersCount = [
     filters.company && filters.company !== 'all',
@@ -150,19 +182,19 @@ export const MachineList: React.FC<MachineListProps> = ({
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'Ativo':
-        return <span className="px-2 py-0.5 text-[11px] font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">Ativo</span>;
-      case 'Em Manutenção':
-        return <span className="px-2 py-0.5 text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded">Manutenção</span>;
-      case 'Desativado':
-        return <span className="px-2 py-0.5 text-[11px] font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20 rounded">Desativado</span>;
-      case 'Reserva':
-        return <span className="px-2 py-0.5 text-[11px] font-medium bg-slate-500/10 text-slate-300 border border-slate-500/20 rounded">Reserva</span>;
-      default:
-        return <span className="px-2 py-0.5 text-[11px] font-medium bg-slate-700 text-slate-300 rounded">{status}</span>;
-    }
+  const getStatusBadge = (status: string, machine?: Machine) => {
+    return (
+      <StatusBadge
+        status={status}
+        customStatuses={customStatuses}
+        size="sm"
+        onClick={machine ? () => {
+          setPasswordTargetMachine(machine);
+          setPasswordTargetStatus(machine.status === 'Ativo' ? 'Em Manutenção' : 'Ativo');
+        } : undefined}
+        title={machine ? `Clique para alterar status operacional de ${machine.hostname} com senha` : undefined}
+      />
+    );
   };
 
   // Distinct sectors
@@ -281,6 +313,15 @@ export const MachineList: React.FC<MachineListProps> = ({
               <ClipboardCheck className="w-3.5 h-3.5" />
               <span>Laudo & Vistoria</span>
             </button>
+
+            <button
+              onClick={() => setIsStatusManageModalOpen(true)}
+              title="Cadastrar e personalizar cores dos status de manutenção e equipamentos"
+              className="flex-1 sm:flex-initial px-3 py-2 sm:py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              <Palette className="w-3.5 h-3.5 text-amber-400" />
+              <span>Status de Manutenção</span>
+            </button>
           </div>
         </div>
 
@@ -384,10 +425,24 @@ export const MachineList: React.FC<MachineListProps> = ({
                 className="w-full py-2 px-3 bg-slate-950/80 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 cursor-pointer"
               >
                 <option value="all">Todos os Status</option>
-                <option value="Ativo">Ativo</option>
-                <option value="Em Manutenção">Em Manutenção</option>
-                <option value="Desativado">Desativado</option>
-                <option value="Reserva">Reserva</option>
+                {customStatuses.length > 0 ? (
+                  customStatuses.map(s => (
+                    <option key={s.id} value={s.name}>
+                      {s.name}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="Ativo">Ativo</option>
+                    <option value="Em Manutenção">Em Manutenção</option>
+                    <option value="Aguardando Peça">Aguardando Peça</option>
+                    <option value="Em Diagnóstico">Em Diagnóstico</option>
+                    <option value="Aguardando Aprovação">Aguardando Aprovação</option>
+                    <option value="Pronto / Liberado">Pronto / Liberado</option>
+                    <option value="Desativado">Desativado</option>
+                    <option value="Reserva">Reserva</option>
+                  </>
+                )}
               </select>
             </div>
 
@@ -475,7 +530,7 @@ export const MachineList: React.FC<MachineListProps> = ({
                       </div>
 
                       <div className="flex-shrink-0">
-                        {getStatusBadge(m.status)}
+                        {getStatusBadge(m.status, m)}
                       </div>
                     </div>
 
@@ -581,6 +636,16 @@ export const MachineList: React.FC<MachineListProps> = ({
                           title="Editar Campos Manuais"
                         >
                           <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPasswordTargetMachine(m);
+                            setPasswordTargetStatus(m.status === 'Ativo' ? 'Em Manutenção' : 'Ativo');
+                          }}
+                          className="p-1.5 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-lg border border-slate-700 transition-colors cursor-pointer"
+                          title="Alterar Status com Senha de Segurança"
+                        >
+                          <Lock className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => onDeleteMachine(m.id, m.hostname)}
@@ -752,7 +817,7 @@ export const MachineList: React.FC<MachineListProps> = ({
 
                         {/* Status */}
                         <td className="py-3.5 px-4">
-                          {getStatusBadge(m.status)}
+                          {getStatusBadge(m.status, m)}
                         </td>
 
                         {/* Actions */}
@@ -771,6 +836,16 @@ export const MachineList: React.FC<MachineListProps> = ({
                               className="p-1.5 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded transition-colors cursor-pointer"
                             >
                               <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setPasswordTargetMachine(m);
+                                setPasswordTargetStatus(m.status === 'Ativo' ? 'Em Manutenção' : 'Ativo');
+                              }}
+                              title="Alterar Status com Senha de Segurança"
+                              className="p-1.5 text-slate-400 hover:text-amber-400 hover:bg-amber-500/10 rounded transition-colors cursor-pointer"
+                            >
+                              <Lock className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => onDeleteMachine(m.id, m.hostname)}
@@ -799,6 +874,34 @@ export const MachineList: React.FC<MachineListProps> = ({
           settings={settings}
           onClose={() => setIsAuditModalOpen(false)}
           onExportCsv={handleExportCsv}
+        />
+      )}
+
+      {/* Modal de Senha para Alteração de Status com Segurança */}
+      {passwordTargetMachine && (
+        <StatusChangePasswordModal
+          isOpen={Boolean(passwordTargetMachine)}
+          onClose={() => setPasswordTargetMachine(null)}
+          machine={passwordTargetMachine}
+          targetStatus={passwordTargetStatus}
+          customStatuses={customStatuses}
+          currentUser={currentUser}
+          onSuccess={() => {
+            setPasswordTargetMachine(null);
+            onRefreshMachines?.();
+          }}
+        />
+      )}
+
+      {/* Modal de Gestão & Cadastro de Status de Manutenção */}
+      {isStatusManageModalOpen && (
+        <StatusManagementModal
+          isOpen={isStatusManageModalOpen}
+          onClose={() => setIsStatusManageModalOpen(false)}
+          onStatusesChanged={() => {
+            fetchStatuses();
+            onRefreshMachines?.();
+          }}
         />
       )}
     </div>

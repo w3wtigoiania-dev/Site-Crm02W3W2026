@@ -217,10 +217,40 @@ CREATE TABLE IF NOT EXISTS assistance_slides (
     cta_text VARCHAR(100),
     cta_link VARCHAR(255),
     is_active BOOLEAN DEFAULT TRUE,
+-- 13. TABELA DE STATUS DE MANUTENÇÃO E EQUIPAMENTOS PERSONALIZÁVEIS
+-- Diferenciação visual por cor e situação com controle de acesso por senha
+CREATE TABLE IF NOT EXISTS equipment_statuses (
+    id VARCHAR(64) PRIMARY KEY,                         -- Identificador único (ex: 'status_ativo', 'status_manutencao')
+    name VARCHAR(100) NOT NULL UNIQUE,                 -- Nome do status (ex: 'Ativo', 'Em Manutenção', 'Aguardando Peça')
+    color VARCHAR(30) NOT NULL,                        -- Paleta/código de cor (ex: 'emerald', 'amber', 'blue', 'rose', 'purple', 'yellow', 'cyan', 'teal', 'indigo', 'slate')
+    hex_color VARCHAR(10) NOT NULL DEFAULT '#10b981',  -- Código Hexadecimal (ex: '#10b981', '#f59e0b')
+    bg_class VARCHAR(120),                             -- Classe Tailwind para badge visual de alto contraste
+    situation_type VARCHAR(60) NOT NULL DEFAULT 'geral', -- Tipo de situação (operacional, manutencao, pendencia, analise, concluido, inativo, reserva)
+    description TEXT,                                  -- Descrição clara da situação técnica
+    requires_password BOOLEAN DEFAULT TRUE,            -- Se exige senha do supervisor/técnico para aplicar
+    is_default BOOLEAN DEFAULT FALSE,                  -- Se é status protegido do sistema
+    order_index INT DEFAULT 0,                         -- Ordem sequencial de exibição
+    is_active BOOLEAN DEFAULT TRUE,                    -- Se está ativo para seleção
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_assistance_slides_order ON assistance_slides(order_index);
-CREATE INDEX IF NOT EXISTS idx_assistance_slides_active ON assistance_slides(is_active);
+CREATE INDEX IF NOT EXISTS idx_equipment_statuses_order ON equipment_statuses(order_index);
+CREATE INDEX IF NOT EXISTS idx_equipment_statuses_active ON equipment_statuses(is_active);
+
+-- 14. TABELA DE AUDITORIA E HISTÓRICO DE MUDANÇA DE STATUS (COM SENHA / AUTORIZAÇÃO)
+CREATE TABLE IF NOT EXISTS equipment_status_logs (
+    id VARCHAR(64) PRIMARY KEY,
+    machine_id VARCHAR(64) NOT NULL,
+    hostname VARCHAR(255),
+    previous_status VARCHAR(100),
+    new_status VARCHAR(100) NOT NULL,
+    reason TEXT,
+    authorized_by VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (machine_id) REFERENCES machines(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_status_logs_machine ON equipment_status_logs(machine_id);
+CREATE INDEX IF NOT EXISTS idx_status_logs_created ON equipment_status_logs(created_at);
 

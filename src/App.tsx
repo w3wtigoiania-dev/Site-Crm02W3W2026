@@ -410,6 +410,8 @@ export default function App() {
               filters={filters}
               settings={settings}
               companies={companies}
+              currentUser={user}
+              onRefreshMachines={() => fetchData(true)}
               onFilterChange={(newFilters) => setFilters(newFilters)}
               onSelectMachine={(m) => {
                 setSelectedMachineId(m.id);
@@ -482,6 +484,7 @@ export default function App() {
           machineId={selectedMachineId}
           initialTab={modalTab}
           companies={companies}
+          currentUser={user}
           onClose={() => setSelectedMachineId(null)}
           onMachineUpdated={() => {
             fetchData(true);

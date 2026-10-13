@@ -89,17 +89,12 @@ export const WebsiteCMSManager: React.FC<WebsiteCMSManagerProps> = ({
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Sincroniza estado inicial das configurações recebidas
+  // Sincroniza estado inicial das configurações recebidas apenas quando settings muda
   useEffect(() => {
     if (settings.website_config) {
-      setFromExternal(settings.website_config);
+      cmsSyncManager.setFromExternal(settings.website_config);
     }
-  }, [settings.website_config, setFromExternal]);
-
-  // Notifica o callback pai se fornecido
-  useEffect(() => {
-    onLiveUpdate?.(liveConfig);
-  }, [liveConfig, onLiveUpdate]);
+  }, [settings.website_config]);
 
   const slides = liveConfig.slides && liveConfig.slides.length > 0
     ? liveConfig.slides

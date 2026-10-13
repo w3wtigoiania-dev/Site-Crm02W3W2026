@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Machine, ClientCompany } from '../types.ts';
+import { Machine, ClientCompany, EquipmentStatus, EquipmentStatusLog } from '../types.ts';
+import { StatusBadge } from '../utils/statusUtils.tsx';
+import { StatusChangePasswordModal } from './StatusChangePasswordModal.tsx';
+import { StatusManagementModal } from './StatusManagementModal.tsx';
 import {
   X,
   Cpu,
@@ -20,13 +23,19 @@ import {
   Layers,
   Activity,
   FileText,
-  Building2
+  Building2,
+  Lock,
+  Palette,
+  KeyRound,
+  History,
+  Tag
 } from 'lucide-react';
 
 interface MachineDetailModalProps {
   machineId: string;
-  initialTab?: 'hardware' | 'manual' | 'history';
+  initialTab?: 'hardware' | 'manual' | 'history' | 'status_audit';
   companies?: ClientCompany[];
+  currentUser?: { name?: string; role?: string } | null;
   onClose: () => void;
   onMachineUpdated: () => void;
 }
@@ -35,16 +44,24 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
   machineId,
   initialTab = 'hardware',
   companies = [],
+  currentUser,
   onClose,
   onMachineUpdated
 }) => {
   const [machine, setMachine] = useState<Machine | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<'hardware' | 'manual' | 'disks' | 'networks' | 'history'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'hardware' | 'manual' | 'disks' | 'networks' | 'history' | 'status_audit'>(initialTab);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState('');
   const [companyList, setCompanyList] = useState<ClientCompany[]>(companies);
+
+  // Statuses e Segurança com Senha
+  const [customStatuses, setCustomStatuses] = useState<EquipmentStatus[]>([]);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [pendingTargetStatus, setPendingTargetStatus] = useState<string>('');
+  const [isStatusManageModalOpen, setIsStatusManageModalOpen] = useState(false);
+  const [statusLogs, setStatusLogs] = useState<EquipmentStatusLog[]>([]);
 
   useEffect(() => {
     if (companies && companies.length > 0) {
@@ -99,12 +116,64 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
     }
   };
 
+  const fetchCustomStatuses = async () => {
+    try {
+      const res = await fetch('/api/equipment-statuses');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.statuses) setCustomStatuses(data.statuses);
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar status:', e);
+    }
+  };
+
+  const fetchStatusLogs = async () => {
+    try {
+      const res = await fetch(`/api/machines/${machineId}/status-logs`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.logs) setStatusLogs(data.logs);
+      }
+    } catch (e) {
+      console.warn('Erro ao carregar histórico de status:', e);
+    }
+  };
+
   useEffect(() => {
     loadMachineDetails();
+    fetchCustomStatuses();
+    fetchStatusLogs();
   }, [machineId]);
+
+  const handleRequestStatusChange = (newStatus: string) => {
+    if (!machine) return;
+    if (newStatus === machine.status) {
+      setManualForm(prev => ({ ...prev, status: newStatus }));
+      return;
+    }
+    setPendingTargetStatus(newStatus);
+    setIsPasswordModalOpen(true);
+  };
+
+  const handleStatusChangeSuccess = (updated: Machine) => {
+    setMachine(updated);
+    setManualForm(prev => ({ ...prev, status: updated.status }));
+    fetchStatusLogs();
+    onMachineUpdated();
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
+  };
 
   const handleSaveManual = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Se o usuário alterou o status no formulário, exige a senha primeiro
+    if (machine && manualForm.status !== machine.status) {
+      handleRequestStatusChange(manualForm.status);
+      return;
+    }
+
     setSaving(true);
     setSaveSuccess(false);
 
@@ -173,9 +242,19 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
                 <span className="px-2 py-0.5 text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 rounded uppercase">
                   {machine.machine_type}
                 </span>
-                <span className="px-2 py-0.5 text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded">
-                  {machine.status}
-                </span>
+                <StatusBadge status={machine.status} customStatuses={customStatuses} size="sm" />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingTargetStatus(machine.status === 'Ativo' ? 'Em Manutenção' : 'Ativo');
+                    setIsPasswordModalOpen(true);
+                  }}
+                  className="px-2 py-0.5 text-[10px] font-semibold bg-slate-800 hover:bg-slate-700 text-amber-400 hover:text-amber-300 border border-slate-700 rounded flex items-center gap-1 transition-colors cursor-pointer"
+                  title="Alterar status operacional com senha de supervisor"
+                >
+                  <Lock className="w-2.5 h-2.5 text-amber-400" />
+                  <span>Mudar Status</span>
+                </button>
                 <span className="px-2 py-0.5 text-xs font-semibold bg-blue-500/15 text-blue-400 border border-blue-500/30 rounded flex items-center gap-1">
                   <Building2 className="w-3.5 h-3.5" />
                   {machine.client_company || 'Cliente Geral'}
@@ -252,6 +331,17 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
           >
             <Activity className="w-3.5 h-3.5" />
             Telemetria Recente
+          </button>
+          <button
+            onClick={() => setActiveTab('status_audit')}
+            className={`py-3 px-3 text-xs font-medium border-b-2 transition-colors cursor-pointer flex items-center gap-2 ${
+              activeTab === 'status_audit'
+                ? 'border-blue-500 text-blue-400 font-semibold'
+                : 'border-transparent text-slate-400 hover:text-slate-200'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-amber-400" />
+            <span>Auditoria de Status ({statusLogs.length})</span>
           </button>
         </div>
 
@@ -554,19 +644,68 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
                   />
                 </div>
 
-                {/* Status */}
+                {/* Status Operacional */}
                 <div>
-                  <label className="block text-slate-300 font-medium mb-1">Status Operacional</label>
-                  <select
-                    value={manualForm.status}
-                    onChange={(e) => setManualForm({ ...manualForm, status: e.target.value })}
-                    className="w-full py-2 px-3 bg-slate-950/80 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="Ativo">Ativo</option>
-                    <option value="Em Manutenção">Em Manutenção</option>
-                    <option value="Desativado">Desativado</option>
-                    <option value="Reserva">Reserva</option>
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-slate-300 font-medium text-xs flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-amber-400" />
+                      Status Operacional (Com Senha)
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsStatusManageModalOpen(true)}
+                      className="text-[11px] text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Palette className="w-3 h-3" />
+                      <span>+ Cadastrar / Gerenciar Status</span>
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={manualForm.status}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (machine && val !== machine.status) {
+                          handleRequestStatusChange(val);
+                        } else {
+                          setManualForm({ ...manualForm, status: val });
+                        }
+                      }}
+                      className="flex-1 py-2 px-3 bg-slate-950/80 border border-slate-800 rounded-lg text-white focus:outline-none focus:ring-1 focus:ring-blue-500 text-xs"
+                    >
+                      {customStatuses.length > 0 ? (
+                        customStatuses.map(s => (
+                          <option key={s.id} value={s.name}>
+                            {s.name}
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="Ativo">Ativo</option>
+                          <option value="Em Manutenção">Em Manutenção</option>
+                          <option value="Aguardando Peça">Aguardando Peça</option>
+                          <option value="Em Diagnóstico">Em Diagnóstico</option>
+                          <option value="Aguardando Aprovação">Aguardando Aprovação</option>
+                          <option value="Pronto / Liberado">Pronto / Liberado</option>
+                          <option value="Garantia / RMA">Garantia / RMA</option>
+                          <option value="Reserva">Reserva</option>
+                          <option value="Desativado">Desativado</option>
+                          <option value="Quarentena / Bloqueado">Quarentena / Bloqueado</option>
+                        </>
+                      )}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPendingTargetStatus(manualForm.status);
+                        setIsPasswordModalOpen(true);
+                      }}
+                      className="p-2 bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 rounded-lg transition-colors cursor-pointer shrink-0"
+                      title="Autorizar alteração de status com senha"
+                    >
+                      <KeyRound className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Patrimônio */}
@@ -693,6 +832,61 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
               )}
             </div>
           )}
+
+          {/* TAB 6: STATUS AUDIT HISTORY */}
+          {activeTab === 'status_audit' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <div>
+                  <h3 className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                    Histórico de Auditoria de Trocas de Status
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Registro de todas as alterações de status deste equipamento validadas por senha.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPendingTargetStatus(machine.status === 'Ativo' ? 'Em Manutenção' : 'Ativo');
+                    setIsPasswordModalOpen(true);
+                  }}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-sm shadow-blue-500/20"
+                >
+                  <Lock className="w-3.5 h-3.5" />
+                  <span>Alterar Status com Senha</span>
+                </button>
+              </div>
+
+              {statusLogs.length === 0 ? (
+                <div className="p-8 text-center text-slate-500 text-xs bg-slate-950/40 rounded-xl border border-slate-800">
+                  Nenhum registro de alteração de status registrado para este equipamento até o momento.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {statusLogs.map((log) => (
+                    <div key={log.id} className="p-3 bg-slate-950/70 border border-slate-800 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between text-xs flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <StatusBadge status={log.previous_status || 'Inicial'} customStatuses={customStatuses} size="sm" />
+                          <span className="text-slate-500 font-bold">➔</span>
+                          <StatusBadge status={log.new_status} customStatuses={customStatuses} size="sm" />
+                        </div>
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          {new Date(log.created_at).toLocaleString('pt-BR')}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800/80">
+                        <span>Autorizado por: <strong className="text-slate-200">{log.authorized_by}</strong></span>
+                        {log.reason && <span className="italic text-slate-400">{log.reason}</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Footer */}
@@ -708,6 +902,31 @@ export const MachineDetailModal: React.FC<MachineDetailModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Modal de Senha para Mudança de Status */}
+      {isPasswordModalOpen && machine && (
+        <StatusChangePasswordModal
+          isOpen={isPasswordModalOpen}
+          onClose={() => setIsPasswordModalOpen(false)}
+          machine={machine}
+          targetStatus={pendingTargetStatus}
+          customStatuses={customStatuses}
+          currentUser={currentUser}
+          onSuccess={handleStatusChangeSuccess}
+        />
+      )}
+
+      {/* Modal de Cadastro & Gestão de Status */}
+      {isStatusManageModalOpen && (
+        <StatusManagementModal
+          isOpen={isStatusManageModalOpen}
+          onClose={() => setIsStatusManageModalOpen(false)}
+          onStatusesChanged={() => {
+            fetchCustomStatuses();
+            onMachineUpdated();
+          }}
+        />
+      )}
     </div>
   );
 };

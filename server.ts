@@ -77,7 +77,15 @@ import {
   updateCarouselSlide,
   deleteCarouselSlide,
   reorderCarouselSlides,
-  resetCarouselSlidesToDefault
+  resetCarouselSlidesToDefault,
+  getEquipmentStatuses,
+  getEquipmentStatusById,
+  createEquipmentStatus,
+  updateEquipmentStatus,
+  deleteEquipmentStatus,
+  verifyStatusChangePassword,
+  updateMachineStatusWithAuth,
+  getEquipmentStatusLogs
 } from './server/db.ts';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -304,6 +312,132 @@ app.delete('/api/machines/:id', (req, res) => {
   } catch (err: any) {
     console.error('Error deleting machine:', err);
     res.status(500).json({ error: 'Erro ao excluir equipamento' });
+  }
+});
+
+// -------------------------------------------------------------
+// STATUS DE MANUTENÇÃO & EQUIPAMENTOS (COM SEGURANÇA E SENHA)
+// -------------------------------------------------------------
+
+// Listar todos os status cadastrados
+app.get(['/api/equipment-statuses', '/api/statuses'], (req, res) => {
+  try {
+    const onlyActive = req.query.active === 'true';
+    const statuses = getEquipmentStatuses(onlyActive);
+    res.json({ success: true, statuses, total: statuses.length });
+  } catch (err: any) {
+    console.error('Error fetching statuses:', err);
+    res.status(500).json({ success: false, error: 'Erro ao carregar status de equipamentos' });
+  }
+});
+
+// Cadastrar novo status de equipamento / manutenção
+app.post(['/api/equipment-statuses', '/api/statuses'], (req, res) => {
+  try {
+    const { name, color, hex_color, bg_class, situation_type, description, requires_password, is_active } = req.body;
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, error: 'Nome do status é obrigatório.' });
+    }
+    const created = createEquipmentStatus({
+      name,
+      color,
+      hex_color,
+      bg_class,
+      situation_type,
+      description,
+      requires_password: requires_password !== undefined ? requires_password : true,
+      is_active: is_active !== undefined ? is_active : true
+    });
+    res.status(201).json({ success: true, message: 'Status cadastrado com sucesso!', status: created });
+  } catch (err: any) {
+    console.error('Error creating status:', err);
+    res.status(400).json({ success: false, error: err.message || 'Erro ao cadastrar status.' });
+  }
+});
+
+// Atualizar status existente
+app.put(['/api/equipment-statuses/:id', '/api/statuses/:id'], (req, res) => {
+  try {
+    const success = updateEquipmentStatus(req.params.id, req.body);
+    if (!success) {
+      return res.status(404).json({ success: false, error: 'Status não encontrado para atualização.' });
+    }
+    const updated = getEquipmentStatusById(req.params.id);
+    res.json({ success: true, message: 'Status atualizado com sucesso!', status: updated });
+  } catch (err: any) {
+    console.error('Error updating status:', err);
+    res.status(400).json({ success: false, error: err.message || 'Erro ao atualizar status.' });
+  }
+});
+
+// Excluir status customizado
+app.delete(['/api/equipment-statuses/:id', '/api/statuses/:id'], (req, res) => {
+  try {
+    const success = deleteEquipmentStatus(req.params.id);
+    if (!success) {
+      return res.status(404).json({ success: false, error: 'Status não encontrado.' });
+    }
+    res.json({ success: true, message: 'Status removido com sucesso!' });
+  } catch (err: any) {
+    console.error('Error deleting status:', err);
+    res.status(400).json({ success: false, error: err.message || 'Erro ao excluir status.' });
+  }
+});
+
+// Validar senha de segurança para alteração de status
+app.post('/api/statuses/verify-password', (req, res) => {
+  try {
+    const { password } = req.body;
+    const auth = verifyStatusChangePassword(password);
+    if (!auth.valid) {
+      return res.status(401).json({ success: false, error: 'Senha de autorização incorreta.' });
+    }
+    res.json({ success: true, authorized_by: auth.authorizedBy });
+  } catch (err: any) {
+    res.status(500).json({ success: false, error: 'Erro ao validar senha de segurança.' });
+  }
+});
+
+// Alterar status de máquina com autenticação por senha e auditoria
+app.post('/api/machines/:id/change-status', (req, res) => {
+  try {
+    const { status, password, reason, requested_by } = req.body;
+    if (!status) {
+      return res.status(400).json({ success: false, error: 'O novo status é obrigatório.' });
+    }
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        error: 'A senha de autorização técnica/supervisor é obrigatória para alterar o status do equipamento.'
+      });
+    }
+
+    const result = updateMachineStatusWithAuth(req.params.id, status, password, reason, requested_by);
+    if (!result.success) {
+      return res.status(401).json({ success: false, error: result.error });
+    }
+
+    res.json({
+      success: true,
+      message: `Status do equipamento alterado para "${status}" com sucesso!`,
+      machine: result.machine,
+      log: result.log
+    });
+  } catch (err: any) {
+    console.error('Error changing machine status:', err);
+    res.status(500).json({ success: false, error: err.message || 'Erro ao alterar status com senha.' });
+  }
+});
+
+// Logs de histórico de alterações de status
+app.get(['/api/statuses/logs', '/api/machines/:id/status-logs'], (req, res) => {
+  try {
+    const machineId = req.params.id || (req.query.machine_id as string);
+    const logs = getEquipmentStatusLogs(machineId);
+    res.json({ success: true, logs, total: logs.length });
+  } catch (err: any) {
+    console.error('Error fetching status logs:', err);
+    res.status(500).json({ success: false, error: 'Erro ao buscar histórico de status.' });
   }
 });
 

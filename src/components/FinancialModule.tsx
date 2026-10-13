@@ -39,7 +39,10 @@ import {
   Settings2,
   Tag,
   Printer,
-  Smartphone
+  Smartphone,
+  LayoutGrid,
+  Table,
+  MoveHorizontal
 } from 'lucide-react';
 import { PayablesMobileSimulatorModal } from './PayablesMobileSimulatorModal.tsx';
 
@@ -78,6 +81,17 @@ export const FinancialModule: React.FC<FinancialModuleProps> = ({
   const [summary, setSummary] = useState<FinancialCompetenceSummary | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+  // Responsive View Modes: 'cards' (otimizada para smartphones 6.1" a 6.8") | 'table' (planilha completa)
+  const [expensesViewMode, setExpensesViewMode] = useState<'cards' | 'table'>(() => {
+    return typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'table' : 'cards';
+  });
+  const [payablesViewMode, setPayablesViewMode] = useState<'cards' | 'table'>(() => {
+    return typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'table' : 'cards';
+  });
+  const [receivablesViewMode, setReceivablesViewMode] = useState<'cards' | 'table'>(() => {
+    return typeof window !== 'undefined' && window.innerWidth >= 1024 ? 'table' : 'cards';
+  });
 
   // Search & Filters for Contas a Pagar
   const [payableSearch, setPayableSearch] = useState<string>('');
@@ -879,7 +893,7 @@ export const FinancialModule: React.FC<FinancialModuleProps> = ({
 
         {/* IMAGEM 03: Cartões de Crédito Diversos - Seletor e Gestão Individual */}
         <div className="pt-4 border-b border-slate-800/60 pb-4">
-          <div className="flex items-center justify-between gap-2 mb-3">
+          <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
             <div className="flex items-center gap-2">
               <CreditCard className="w-4 h-4 text-purple-400" />
               <span className="text-xs font-bold text-slate-200 uppercase tracking-wider">
@@ -1230,6 +1244,36 @@ export const FinancialModule: React.FC<FinancialModuleProps> = ({
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Seletor de Modo de Exibição (Cards Mobile vs Tabela) */}
+              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setExpensesViewMode('cards')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    expensesViewMode === 'cards'
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Visualização em Cards empilhados (Otimizada para Celular 6,1' a 6,8')"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span>Cards</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExpensesViewMode('table')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    expensesViewMode === 'table'
+                      ? 'bg-purple-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Visualização em Planilha (Rolagem horizontal nativa com indicadores de toque)"
+                >
+                  <Table className="w-3.5 h-3.5" />
+                  <span>Tabela</span>
+                </button>
+              </div>
+
               <button
                 onClick={() => fetchFinancialData(false)}
                 disabled={isRefreshing}
@@ -1254,156 +1298,361 @@ export const FinancialModule: React.FC<FinancialModuleProps> = ({
             </div>
           </div>
 
-          {/* Spreadsheet Table View */}
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-semibold text-[10px] border-b border-slate-800">
-                <tr>
-                  <th className="py-3 px-3 w-12 text-center">ID</th>
-                  <th className="py-3 px-3 text-center">Cartão</th>
-                  <th className="py-3 px-4">Descrição / Fornecedor</th>
-                  <th className="py-3 px-3 text-right">V. Total (R$)</th>
-                  <th className="py-3 px-3 text-center">Qtd Parc</th>
-                  <th className="py-3 px-3 text-center">Parc. no Mês</th>
-                  <th className="py-3 px-3 text-right">Valor Parc (R$)</th>
-                  <th className="py-3 px-3 text-right">Saldo Devedor</th>
-                  <th className="py-3 px-3 text-center">Status no Mês</th>
-                  <th className="py-3 px-3 text-center w-14">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80">
-                {expenses.length === 0 ? (
-                  <tr>
-                    <td colSpan={10} className="py-8 text-center text-slate-500">
-                      Nenhum lançamento no cartão registrado para os filtros selecionados.
-                    </td>
-                  </tr>
-                ) : (
-                  expenses.map((item) => {
+          {/* VIEW MODE 1: CARD-BASED RESPONSIVO EMPILHADO (OTIMIZADO PARA CELULAR 6,1" A 6,8") */}
+          {expensesViewMode === 'cards' ? (
+            <div className="p-3.5 sm:p-5 space-y-4">
+              {expenses.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 bg-slate-950/40 rounded-xl border border-slate-800/80">
+                  <CreditCard className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Nenhum lançamento no cartão registrado para os filtros selecionados.</p>
+                  <p className="text-xs text-slate-500 mt-1">Toque em "Lançar Gasto no Cartão" para adicionar uma nova compra.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                  {expenses.map((item) => {
                     const isActive = item.is_active_in_competence;
                     const card = cardsList.find(c => c.id === item.card_id);
                     return (
-                      <tr
+                      <div
                         key={item.id}
-                        className={`transition-colors ${
+                        className={`rounded-2xl border p-4 transition-all flex flex-col justify-between ${
                           isActive
-                            ? 'hover:bg-slate-800/40 bg-slate-900/30'
-                            : 'opacity-40 hover:opacity-75 bg-slate-950/40'
+                            ? 'bg-slate-900/90 border-slate-700/80 hover:border-purple-500/50 shadow-md shadow-black/20'
+                            : 'bg-slate-950/70 border-slate-800/80 opacity-70 hover:opacity-95'
                         }`}
                       >
-                        <td className="py-3 px-3 text-center font-mono text-purple-400 font-semibold">
-                          #{item.id}
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800 text-slate-200 border border-slate-700/80 whitespace-nowrap">
-                            <span className={`w-2 h-2 rounded-full bg-gradient-to-tr ${card?.color_gradient || 'from-purple-500 to-blue-500'}`} />
-                            <span className="truncate max-w-[85px]">{card ? (card.bank_brand || card.card_name) : 'Cartão PJ'}</span>
-                            <span className="text-purple-300 font-mono">••{card?.last_digits || '0000'}</span>
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="font-bold text-white tracking-tight flex items-center gap-1.5">
-                            <span>{item.description}</span>
-                            {item.company_name && (
-                              <span className="text-[10px] text-slate-400 font-normal">
-                                • {item.company_name}
+                        {/* Top: ID, Cartão Badge e Status */}
+                        <div>
+                          <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-800/80">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-mono text-purple-400 font-bold text-xs bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
+                                #{item.id}
                               </span>
-                            )}
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-800 text-slate-200 border border-slate-700/80">
+                                <span className={`w-2 h-2 rounded-full bg-gradient-to-tr ${card?.color_gradient || 'from-purple-500 to-blue-500'}`} />
+                                <span className="truncate max-w-[95px]">{card ? (card.bank_brand || card.card_name) : 'Cartão PJ'}</span>
+                                <span className="text-purple-300 font-mono">••{card?.last_digits || '0000'}</span>
+                              </span>
+                            </div>
+                            <div>
+                              {isActive ? (
+                                <span className="px-2.5 py-0.5 text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 rounded-full">
+                                  Na Fatura
+                                </span>
+                              ) : item.remaining_installments === 0 ? (
+                                <span className="px-2.5 py-0.5 text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 rounded-full">
+                                  Quitado
+                                </span>
+                              ) : (
+                                <span className="px-2.5 py-0.5 text-[10px] font-medium text-slate-400 bg-slate-800 rounded-full">
+                                  Fora da Comp.
+                                </span>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
-                            <span>{item.supplier || item.description}</span>
-                            <span>•</span>
-                            <span className="text-purple-300/80">{item.category}</span>
-                            <span>•</span>
-                            <span>Início: {monthNames[item.first_due_month - 1]}/{item.first_due_year}</span>
+
+                          {/* Título & Detalhes da Compra */}
+                          <div className="py-3 space-y-1.5">
+                            <div className="font-bold text-white text-sm sm:text-base tracking-tight flex items-start justify-between gap-2">
+                              <span>{item.description}</span>
+                              {item.company_name && (
+                                <span className="text-[10px] text-slate-400 font-normal px-2 py-0.5 bg-slate-800/70 rounded border border-slate-700/50 flex-shrink-0">
+                                  {item.company_name}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
+                              <span className="text-slate-300 font-medium">{item.supplier || item.description}</span>
+                              <span>•</span>
+                              <span className="text-purple-300 font-medium">{item.category}</span>
+                              <span>•</span>
+                              <span className="text-[11px] text-slate-400">
+                                Início: {monthNames[item.first_due_month - 1]}/{item.first_due_year}
+                              </span>
+                            </div>
                           </div>
-                        </td>
-                        <td className="py-3 px-3 text-right font-mono font-semibold text-white">
-                          {formatCurrency(item.total_amount)}
-                        </td>
-                        <td className="py-3 px-3 text-center font-mono">
-                          <span className="px-2 py-0.5 bg-slate-800 text-slate-200 border border-slate-700 rounded text-[11px]">
-                            {item.installments_count}x
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-center font-mono">
-                          {isActive ? (
-                            <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded font-semibold text-[11px]">
-                              {item.current_installment_index} / {item.installments_count}
-                            </span>
-                          ) : item.remaining_installments === 0 ? (
-                            <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded text-[10px]">
-                              Quitado
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 bg-slate-800 text-slate-400 rounded text-[10px]">
-                              Futuro
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-3 text-right font-mono font-bold text-blue-400">
-                          {isActive ? formatCurrency(item.installment_value) : 'R$ -'}
-                        </td>
-                        <td className="py-3 px-3 text-right font-mono text-purple-300">
-                          {isActive ? formatCurrency(item.remaining_debt) : 'R$ -'}
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          {isActive ? (
-                            <span className="px-2 py-0.5 text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded">
-                              Na Fatura
-                            </span>
-                          ) : (
-                            <span className="px-2 py-0.5 text-[10px] text-slate-500 bg-slate-900 rounded">
-                              Fora da Comp.
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3 px-3 text-center">
-                          <div className="flex items-center justify-center gap-1">
-                            <button
-                              onClick={() => setEditingExpense(item)}
-                              title="Editar Lançamento (UPDATE)"
-                              className="p-1.5 text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-md transition-colors cursor-pointer"
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              onClick={() => handleDeleteExpense(item.id, item.description)}
-                              title="Remover despesa e suas parcelas (DELETE)"
-                              className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+
+                          {/* Grid Financeiro Empilhado (Otimizado para Telas de 6.1" a 6.8") */}
+                          <div className="grid grid-cols-2 gap-2 p-3 bg-slate-950/80 rounded-xl border border-slate-800/80 text-xs my-2">
+                            <div>
+                              <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                                Valor Total
+                              </span>
+                              <span className="font-mono font-bold text-white text-sm">
+                                {formatCurrency(item.total_amount)}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[10px] uppercase font-semibold text-slate-400 block tracking-wider">
+                                Parcelas
+                              </span>
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="font-mono text-slate-200 font-bold bg-slate-800 px-1.5 py-0.5 rounded text-xs">
+                                  {item.installments_count}x
+                                </span>
+                                {isActive ? (
+                                  <span className="text-[11px] font-mono text-blue-400 font-semibold">
+                                    {item.current_installment_index}ª do total
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] text-slate-500 font-mono">
+                                    {item.remaining_installments} rest.
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="pt-1.5 border-t border-slate-800/70">
+                              <span className="text-[10px] uppercase font-bold text-blue-300 block tracking-wider">
+                                Parcela no Mês (VT)
+                              </span>
+                              <span className="font-mono font-black text-blue-400 text-sm">
+                                {isActive ? formatCurrency(item.installment_value) : 'R$ -'}
+                              </span>
+                            </div>
+                            <div className="pt-1.5 border-t border-slate-800/70">
+                              <span className="text-[10px] uppercase font-semibold text-purple-300 block tracking-wider">
+                                Saldo Devedor
+                              </span>
+                              <span className="font-mono font-bold text-purple-300 text-xs">
+                                {isActive ? formatCurrency(item.remaining_debt) : 'R$ -'}
+                              </span>
+                            </div>
                           </div>
+                        </div>
+
+                        {/* Ações com alvo de toque mínimo de 44px (Ergonomia Mobile) */}
+                        <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-800/70 mt-2">
+                          <button
+                            type="button"
+                            onClick={() => setEditingExpense(item)}
+                            className="min-h-[44px] px-3.5 py-2 text-xs text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 active:bg-slate-650 rounded-xl transition-all flex items-center gap-2 cursor-pointer font-semibold shadow-xs"
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-purple-400" />
+                            <span>Editar</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteExpense(item.id, item.description)}
+                            className="min-h-[44px] px-3.5 py-2 text-xs text-rose-300 hover:text-rose-200 bg-rose-950/40 hover:bg-rose-900/60 active:bg-rose-900 border border-rose-800/40 rounded-xl transition-all flex items-center gap-2 cursor-pointer font-semibold shadow-xs"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                            <span>Excluir</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* Resumo Consolidado Mobile da Competência */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-purple-950/30 border border-purple-500/30 shadow-lg">
+                <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800 flex-wrap gap-2">
+                  <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <CreditCard className="w-4 h-4 text-purple-400" />
+                    Totais Consolidados ({monthNames[competenceMonth - 1]}/{competenceYear})
+                  </span>
+                  <span className="text-xs font-mono text-purple-300 bg-purple-500/10 px-2 py-0.5 rounded border border-purple-500/20">
+                    {summary?.activeExpensesCount} Contratos Ativos
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase block">Total Saldo Devedor</span>
+                    <span className="text-sm sm:text-base font-bold font-mono text-purple-300">
+                      {formatCurrency(summary?.totalSaldoDevedor)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-blue-300 uppercase block font-semibold">Total Fatura (VT Presta)</span>
+                    <span className="text-sm sm:text-base font-black font-mono text-blue-400">
+                      {formatCurrency(summary?.vtPresta)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-purple-400 uppercase block">Saldo Restante Futuro</span>
+                    <span className="text-sm sm:text-base font-bold font-mono text-purple-300">
+                      {formatCurrency(summary?.totalRemainingDebt)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase block">Situação Geral</span>
+                    <span className="text-xs font-semibold text-emerald-400 block mt-0.5">
+                      Fatura Operacional
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div>
+              {/* Indicador Visual de Rolagem Horizontal / Touch Indicator */}
+              <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-purple-950/40 via-slate-900 to-slate-950 border-b border-slate-800 text-[11px] text-slate-300">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center text-purple-400 animate-pulse">
+                    <MoveHorizontal className="w-4 h-4" />
+                  </div>
+                  <span>
+                    <strong>Rolagem horizontal nativa ativada:</strong> Deslize com o dedo para os lados (👈 👉) para visualizar todas as 10 colunas
+                  </span>
+                </div>
+                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono bg-purple-500/10 text-purple-300 border border-purple-500/20 px-2 py-0.5 rounded">
+                  10 Colunas • Toque Habilitado
+                </span>
+              </div>
+
+              {/* Spreadsheet Table View com rolagem horizontal nativa */}
+              <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-purple-500/30 scroll-smooth touch-pan-x">
+                <table className="min-w-[980px] w-full text-left text-xs">
+                  <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-semibold text-[10px] border-b border-slate-800">
+                    <tr>
+                      <th className="py-3 px-3 w-12 text-center">ID</th>
+                      <th className="py-3 px-3 text-center">Cartão</th>
+                      <th className="py-3 px-4">Descrição / Fornecedor</th>
+                      <th className="py-3 px-3 text-right">V. Total (R$)</th>
+                      <th className="py-3 px-3 text-center">Qtd Parc</th>
+                      <th className="py-3 px-3 text-center">Parc. no Mês</th>
+                      <th className="py-3 px-3 text-right">Valor Parc (R$)</th>
+                      <th className="py-3 px-3 text-right">Saldo Devedor</th>
+                      <th className="py-3 px-3 text-center">Status no Mês</th>
+                      <th className="py-3 px-3 text-center w-14">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/80">
+                    {expenses.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="py-8 text-center text-slate-500">
+                          Nenhum lançamento no cartão registrado para os filtros selecionados.
                         </td>
                       </tr>
-                    );
-                  })
-                )}
-              </tbody>
-              {/* Spreadsheet Consolidated Footer */}
-              <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white">
-                <tr>
-                  <td colSpan={3} className="py-3 px-4 text-right uppercase tracking-wider text-xs">
-                    Totais da Competência ({monthNames[competenceMonth - 1]}/{competenceYear}):
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono text-sm text-purple-300">
-                    {formatCurrency(summary?.totalSaldoDevedor)}
-                  </td>
-                  <td colSpan={2} className="text-center text-[11px] text-slate-400 font-normal">
-                    {summary?.activeExpensesCount} Contratos Ativos
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono text-sm text-blue-400 font-black">
-                    {formatCurrency(summary?.vtPresta)}
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono text-xs text-purple-300">
-                    {formatCurrency(summary?.totalRemainingDebt)}
-                  </td>
-                  <td colSpan={2}></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+                    ) : (
+                      expenses.map((item) => {
+                        const isActive = item.is_active_in_competence;
+                        const card = cardsList.find(c => c.id === item.card_id);
+                        return (
+                          <tr
+                            key={item.id}
+                            className={`transition-colors ${
+                              isActive
+                                ? 'hover:bg-slate-800/40 bg-slate-900/30'
+                                : 'opacity-40 hover:opacity-75 bg-slate-950/40'
+                            }`}
+                          >
+                            <td className="py-3 px-3 text-center font-mono text-purple-400 font-semibold">
+                              #{item.id}
+                            </td>
+                            <td className="py-3 px-3 text-center">
+                              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800 text-slate-200 border border-slate-700/80 whitespace-nowrap">
+                                <span className={`w-2 h-2 rounded-full bg-gradient-to-tr ${card?.color_gradient || 'from-purple-500 to-blue-500'}`} />
+                                <span className="truncate max-w-[85px]">{card ? (card.bank_brand || card.card_name) : 'Cartão PJ'}</span>
+                                <span className="text-purple-300 font-mono">••{card?.last_digits || '0000'}</span>
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <div className="font-bold text-white tracking-tight flex items-center gap-1.5">
+                                <span>{item.description}</span>
+                                {item.company_name && (
+                                  <span className="text-[10px] text-slate-400 font-normal">
+                                    • {item.company_name}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+                                <span>{item.supplier || item.description}</span>
+                                <span>•</span>
+                                <span className="text-purple-300/80">{item.category}</span>
+                                <span>•</span>
+                                <span>Início: {monthNames[item.first_due_month - 1]}/{item.first_due_year}</span>
+                              </div>
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono font-semibold text-white">
+                              {formatCurrency(item.total_amount)}
+                            </td>
+                            <td className="py-3 px-3 text-center font-mono">
+                              <span className="px-2 py-0.5 bg-slate-800 text-slate-200 border border-slate-700 rounded text-[11px]">
+                                {item.installments_count}x
+                              </span>
+                            </td>
+                            <td className="py-3 px-3 text-center font-mono">
+                              {isActive ? (
+                                <span className="px-2 py-0.5 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded font-semibold text-[11px]">
+                                  {item.current_installment_index} / {item.installments_count}
+                                </span>
+                              ) : item.remaining_installments === 0 ? (
+                                <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded text-[10px]">
+                                  Quitado
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 bg-slate-800 text-slate-400 rounded text-[10px]">
+                                  Futuro
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono font-bold text-blue-400">
+                              {isActive ? formatCurrency(item.installment_value) : 'R$ -'}
+                            </td>
+                            <td className="py-3 px-3 text-right font-mono text-purple-300">
+                              {isActive ? formatCurrency(item.remaining_debt) : 'R$ -'}
+                            </td>
+                            <td className="py-3 px-3 text-center">
+                              {isActive ? (
+                                <span className="px-2 py-0.5 text-[10px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded">
+                                  Na Fatura
+                                </span>
+                              ) : (
+                                <span className="px-2 py-0.5 text-[10px] text-slate-500 bg-slate-900 rounded">
+                                  Fora da Comp.
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3 px-3 text-center">
+                              <div className="flex items-center justify-center gap-1">
+                                <button
+                                  onClick={() => setEditingExpense(item)}
+                                  title="Editar Lançamento (UPDATE)"
+                                  className="p-1.5 text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 rounded-md transition-colors cursor-pointer"
+                                >
+                                  <Pencil className="w-3.5 h-3.5" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteExpense(item.id, item.description)}
+                                  title="Remover despesa e suas parcelas (DELETE)"
+                                  className="p-1.5 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                  {/* Spreadsheet Consolidated Footer */}
+                  <tfoot className="bg-slate-950 font-bold border-t-2 border-slate-700 text-white">
+                    <tr>
+                      <td colSpan={3} className="py-3 px-4 text-right uppercase tracking-wider text-xs">
+                        Totais da Competência ({monthNames[competenceMonth - 1]}/{competenceYear}):
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-sm text-purple-300">
+                        {formatCurrency(summary?.totalSaldoDevedor)}
+                      </td>
+                      <td colSpan={2} className="text-center text-[11px] text-slate-400 font-normal">
+                        {summary?.activeExpensesCount} Contratos Ativos
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-sm text-blue-400 font-black">
+                        {formatCurrency(summary?.vtPresta)}
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-xs text-purple-300">
+                        {formatCurrency(summary?.totalRemainingDebt)}
+                      </td>
+                      <td colSpan={2}></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1445,12 +1694,42 @@ export const FinancialModule: React.FC<FinancialModuleProps> = ({
               <select
                 value={payableStatusFilter}
                 onChange={(e) => setPayableStatusFilter(e.target.value)}
-                className="py-1.5 px-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-200 focus:outline-none"
+                className="py-1.5 px-2 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-200 focus:outline-none cursor-pointer"
               >
                 <option value="all">Status: Todos</option>
                 <option value="Pendente">Pendentes</option>
                 <option value="Pago">Pagos</option>
               </select>
+
+              {/* Seletor de Modo de Exibição (Cards Mobile vs Tabela) */}
+              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setPayablesViewMode('cards')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    payablesViewMode === 'cards'
+                      ? 'bg-rose-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Visualização em Cards empilhados (Otimizada para Celular 6,1' a 6,8')"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span>Cards</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPayablesViewMode('table')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    payablesViewMode === 'table'
+                      ? 'bg-rose-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Visualização em Planilha (Rolagem horizontal nativa com indicadores de toque)"
+                >
+                  <Table className="w-3.5 h-3.5" />
+                  <span>Tabela</span>
+                </button>
+              </div>
 
               {/* Visualizar pelo Celular Button (IMAGEM 01 E 02: TELAS MÉDIAS E GRANDES) */}
               <button
@@ -1473,121 +1752,298 @@ export const FinancialModule: React.FC<FinancialModuleProps> = ({
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-semibold text-[10px] border-b border-slate-800">
-                <tr>
-                  <th className="py-3 px-3 text-center">Código</th>
-                  <th className="py-3 px-4">Descrição da Despesa</th>
-                  <th className="py-3 px-3">Fornecedor</th>
-                  <th className="py-3 px-3">Categoria</th>
-                  <th className="py-3 px-3 text-center">Vencimento</th>
-                  <th className="py-3 px-3 text-right">Valor (R$)</th>
-                  <th className="py-3 px-3 text-center">Parcela</th>
-                  <th className="py-3 px-3 text-center">Status</th>
-                  <th className="py-3 px-3 text-center w-36">Ações (CRUD)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80">
-                {filteredPayables.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="py-8 text-center text-slate-500">
-                      Nenhuma conta a pagar encontrada para os filtros selecionados.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredPayables.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="py-3 px-3 text-center font-mono text-slate-400">
-                        #{item.code}
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-white">
-                        <div className="flex items-center gap-1.5">
-                          {item.credit_card_expense_id && (
-                            <CreditCard className="w-3 h-3 text-purple-400 flex-shrink-0" />
-                          )}
-                          <span>{item.description}</span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 text-slate-300">
-                        {item.supplier || '-'}
-                      </td>
-                      <td className="py-3 px-3 text-slate-400">
-                        <span className="px-2 py-0.5 bg-slate-800 text-slate-300 rounded text-[10px]">
-                          {item.category}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono text-slate-300">
-                        {item.due_date}
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono font-bold text-rose-400">
-                        {formatCurrency(item.amount)}
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono text-slate-300">
-                        {item.installment_number}/{item.total_installments}
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <span className={`px-2 py-0.5 text-[10px] font-semibold rounded border ${
-                          item.status === 'Pago'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                        }`}>
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => handleTogglePayableStatus(item)}
-                            title={item.status === 'Pago' ? 'Marcar como Pendente' : 'Dar Baixa / Quitar'}
-                            className={`px-2 py-1 rounded text-[10px] font-semibold transition-all cursor-pointer ${
+          {/* VIEW MODE 1: CARD-BASED RESPONSIVO EMPILHADO (OTIMIZADO PARA SMARTPHONES DE 6,1" A 6,8") */}
+          {payablesViewMode === 'cards' ? (
+            <div className="p-3.5 sm:p-5 space-y-4">
+              {filteredPayables.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 bg-slate-950/40 rounded-xl border border-slate-800/80">
+                  <TrendingDown className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Nenhuma conta a pagar encontrada para os filtros selecionados.</p>
+                  <p className="text-xs text-slate-500 mt-1">Clique em "Nova Conta a Pagar" para registrar uma obrigação financeira.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                  {filteredPayables.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`rounded-2xl border p-4 transition-all flex flex-col justify-between ${
+                        item.status === 'Pago'
+                          ? 'bg-slate-900/90 border-emerald-500/30 hover:border-emerald-500/50 shadow-md shadow-black/20'
+                          : 'bg-slate-900/90 border-slate-800 hover:border-rose-500/40 shadow-md shadow-black/20'
+                      }`}
+                    >
+                      {/* Top: Código, Parcela e Status */}
+                      <div>
+                        <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-800/80">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-rose-300 font-bold text-xs bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
+                              #{item.code}
+                            </span>
+                            <span className="text-[11px] font-mono text-slate-300 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                              {item.installment_number}/{item.total_installments} Parc.
+                            </span>
+                          </div>
+                          <div>
+                            <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full border ${
                               item.status === 'Pago'
-                                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                                : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
-                            }`}
-                          >
-                            {item.status === 'Pago' ? 'Desfazer' : 'Baixa'}
-                          </button>
+                                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                                : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                            }`}>
+                              {item.status === 'Pago' ? 'Pago' : 'Pendente'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Descrição & Metadados */}
+                        <div className="py-3 space-y-1.5">
+                          <div className="font-bold text-white text-sm sm:text-base tracking-tight flex items-start gap-2">
+                            {item.credit_card_expense_id && (
+                              <CreditCard className="w-4 h-4 text-purple-400 flex-shrink-0 mt-0.5" />
+                            )}
+                            <span>{item.description}</span>
+                          </div>
+                          <div className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
+                            <span className="text-slate-300 font-medium">{item.supplier || 'Sem fornecedor'}</span>
+                            <span>•</span>
+                            <span className="px-2 py-0.5 bg-slate-800 text-slate-300 rounded text-[10px] font-medium border border-slate-700/60">
+                              {item.category}
+                            </span>
+                          </div>
+                          <div className="text-xs text-slate-400 flex items-center gap-1.5 pt-1">
+                            <Calendar className="w-3.5 h-3.5 text-rose-400" />
+                            <span>Vencimento:</span>
+                            <span className="font-mono font-bold text-white">{item.due_date}</span>
+                          </div>
+                        </div>
+
+                        {/* Valor da Conta Empilhado */}
+                        <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800/80 flex items-center justify-between text-xs my-2">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                            Valor do Título
+                          </span>
+                          <span className={`font-mono font-black text-base sm:text-lg ${
+                            item.status === 'Pago' ? 'text-emerald-400' : 'text-rose-400'
+                          }`}>
+                            {formatCurrency(item.amount)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Ações com ergonomia mobile (alvo mínimo de toque 44px) */}
+                      <div className="pt-3 flex items-center justify-between gap-1.5 border-t border-slate-800/70 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePayableStatus(item)}
+                          className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer flex-1 shadow-sm ${
+                            item.status === 'Pago'
+                              ? 'bg-slate-800 text-slate-300 hover:bg-slate-750 border border-slate-700'
+                              : 'bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white shadow-emerald-600/30'
+                          }`}
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>{item.status === 'Pago' ? 'Desfazer' : 'Dar Baixa'}</span>
+                        </button>
+
+                        <div className="flex items-center gap-1">
                           <button
+                            type="button"
                             onClick={() => setViewingPayable(item)}
-                            title="Visualizar Detalhes (SELECT)"
-                            className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors cursor-pointer"
+                            title="Visualizar Detalhes"
+                            className="min-h-[44px] min-w-[44px] p-2 text-slate-400 hover:text-white bg-slate-800/80 hover:bg-slate-700 rounded-xl transition-colors flex items-center justify-center cursor-pointer"
                           >
-                            <Eye className="w-3.5 h-3.5" />
+                            <Eye className="w-4 h-4" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => setEditingPayable(item)}
-                            title="Editar Conta a Pagar (UPDATE)"
-                            className="p-1 text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 rounded transition-colors cursor-pointer"
+                            title="Editar Conta"
+                            className="min-h-[44px] min-w-[44px] p-2 text-slate-400 hover:text-purple-400 bg-slate-800/80 hover:bg-purple-950/40 rounded-xl transition-colors flex items-center justify-center cursor-pointer"
                           >
-                            <Pencil className="w-3.5 h-3.5" />
+                            <Pencil className="w-4 h-4" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => handleDeletePayable(item.id, item.description)}
-                            title="Excluir Conta a Pagar (DELETE)"
-                            className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors cursor-pointer"
+                            title="Excluir Conta"
+                            className="min-h-[44px] min-w-[44px] p-2 text-slate-400 hover:text-rose-400 bg-slate-800/80 hover:bg-rose-950/40 rounded-xl transition-colors flex items-center justify-center cursor-pointer"
                           >
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                      </td>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Resumo Consolidado Mobile de Contas a Pagar */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-rose-950/30 border border-rose-500/30 shadow-lg">
+                <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800 flex-wrap gap-2">
+                  <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <TrendingDown className="w-4 h-4 text-rose-400" />
+                    Consolidação de Contas a Pagar ({monthNames[competenceMonth - 1]}/{competenceYear})
+                  </span>
+                  <span className="text-xs font-mono text-rose-300 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20">
+                    {filteredPayables.length} Obrigações
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase block">Total a Pagar no Mês</span>
+                    <span className="text-base font-black font-mono text-rose-400">
+                      {formatCurrency(summary?.totalAccountsPayable)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-amber-300 uppercase block font-semibold">Pendentes</span>
+                    <span className="text-sm font-bold font-mono text-amber-400">
+                      {filteredPayables.filter(p => p.status !== 'Pago').length} contas
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-emerald-300 uppercase block font-semibold">Baixadas / Pagas</span>
+                    <span className="text-sm font-bold font-mono text-emerald-400">
+                      {filteredPayables.filter(p => p.status === 'Pago').length} contas
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div>
+              {/* Indicador Visual de Rolagem Horizontal / Touch Indicator */}
+              <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-rose-950/40 via-slate-900 to-slate-950 border-b border-slate-800 text-[11px] text-slate-300">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center text-rose-400 animate-pulse">
+                    <MoveHorizontal className="w-4 h-4" />
+                  </div>
+                  <span>
+                    <strong>Rolagem horizontal nativa ativada:</strong> Deslize com o dedo lateralmente (👈 👉) para acessar todas as 9 colunas de contas a pagar
+                  </span>
+                </div>
+                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono bg-rose-500/10 text-rose-300 border border-rose-500/20 px-2 py-0.5 rounded">
+                  9 Colunas • Toque Habilitado
+                </span>
+              </div>
+
+              {/* Tabela com rolagem horizontal nativa */}
+              <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-rose-500/30 scroll-smooth touch-pan-x">
+                <table className="min-w-[920px] w-full text-left text-xs">
+                  <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-semibold text-[10px] border-b border-slate-800">
+                    <tr>
+                      <th className="py-3 px-3 text-center">Código</th>
+                      <th className="py-3 px-4">Descrição da Despesa</th>
+                      <th className="py-3 px-3">Fornecedor</th>
+                      <th className="py-3 px-3">Categoria</th>
+                      <th className="py-3 px-3 text-center">Vencimento</th>
+                      <th className="py-3 px-3 text-right">Valor (R$)</th>
+                      <th className="py-3 px-3 text-center">Parcela</th>
+                      <th className="py-3 px-3 text-center">Status</th>
+                      <th className="py-3 px-3 text-center w-36">Ações (CRUD)</th>
                     </tr>
-                  ))
-                )}
-              </tbody>
-              <tfoot className="bg-slate-950 font-bold border-t border-slate-800 text-white">
-                <tr>
-                  <td colSpan={5} className="py-3 px-4 text-right uppercase tracking-wider text-xs">
-                    Total a Pagar no Mês:
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono text-sm text-rose-400">
-                    {formatCurrency(summary?.totalAccountsPayable)}
-                  </td>
-                  <td colSpan={3}></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/80">
+                    {filteredPayables.length === 0 ? (
+                      <tr>
+                        <td colSpan={9} className="py-8 text-center text-slate-500">
+                          Nenhuma conta a pagar encontrada para os filtros selecionados.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredPayables.map((item) => (
+                        <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
+                          <td className="py-3 px-3 text-center font-mono text-slate-400">
+                            #{item.code}
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-white">
+                            <div className="flex items-center gap-1.5">
+                              {item.credit_card_expense_id && (
+                                <CreditCard className="w-3 h-3 text-purple-400 flex-shrink-0" />
+                              )}
+                              <span>{item.description}</span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-3 text-slate-300">
+                            {item.supplier || '-'}
+                          </td>
+                          <td className="py-3 px-3 text-slate-400">
+                            <span className="px-2 py-0.5 bg-slate-800 text-slate-300 rounded text-[10px]">
+                              {item.category}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-center font-mono text-slate-300">
+                            {item.due_date}
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono font-bold text-rose-400">
+                            {formatCurrency(item.amount)}
+                          </td>
+                          <td className="py-3 px-3 text-center font-mono text-slate-300">
+                            {item.installment_number}/{item.total_installments}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <span className={`px-2 py-0.5 text-[10px] font-semibold rounded border ${
+                              item.status === 'Pago'
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                            }`}>
+                              {item.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => handleTogglePayableStatus(item)}
+                                title={item.status === 'Pago' ? 'Marcar como Pendente' : 'Dar Baixa / Quitar'}
+                                className={`px-2 py-1 rounded text-[10px] font-semibold transition-all cursor-pointer ${
+                                  item.status === 'Pago'
+                                    ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
+                                }`}
+                              >
+                                {item.status === 'Pago' ? 'Desfazer' : 'Baixa'}
+                              </button>
+                              <button
+                                onClick={() => setViewingPayable(item)}
+                                title="Visualizar Detalhes (SELECT)"
+                                className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors cursor-pointer"
+                              >
+                                <Eye className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setEditingPayable(item)}
+                                title="Editar Conta a Pagar (UPDATE)"
+                                className="p-1 text-slate-400 hover:text-purple-400 hover:bg-purple-500/10 rounded transition-colors cursor-pointer"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeletePayable(item.id, item.description)}
+                                title="Excluir Conta a Pagar (DELETE)"
+                                className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                  <tfoot className="bg-slate-950 font-bold border-t border-slate-800 text-white">
+                    <tr>
+                      <td colSpan={5} className="py-3 px-4 text-right uppercase tracking-wider text-xs">
+                        Total a Pagar no Mês:
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-sm text-rose-400">
+                        {formatCurrency(summary?.totalAccountsPayable)}
+                      </td>
+                      <td colSpan={3}></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1607,100 +2063,275 @@ export const FinancialModule: React.FC<FinancialModuleProps> = ({
               </p>
             </div>
 
-            <button
-              onClick={() => setIsReceivableModalOpen(true)}
-              className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow-sm shadow-emerald-500/25 flex items-center gap-1.5 transition-all cursor-pointer"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Nova Conta a Receber</span>
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Seletor de Modo de Exibição (Cards Mobile vs Tabela) */}
+              <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setReceivablesViewMode('cards')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    receivablesViewMode === 'cards'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Visualização em Cards empilhados (Otimizada para Celular 6,1' a 6,8')"
+                >
+                  <LayoutGrid className="w-3.5 h-3.5" />
+                  <span>Cards</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReceivablesViewMode('table')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    receivablesViewMode === 'table'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="Visualização em Planilha (Rolagem horizontal nativa com indicadores de toque)"
+                >
+                  <Table className="w-3.5 h-3.5" />
+                  <span>Tabela</span>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setIsReceivableModalOpen(true)}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow-sm shadow-emerald-500/25 flex items-center gap-1.5 transition-all cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Nova Conta a Receber</span>
+              </button>
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-semibold text-[10px] border-b border-slate-800">
-                <tr>
-                  <th className="py-3 px-3 text-center">Código</th>
-                  <th className="py-3 px-4">Descrição do Faturamento</th>
-                  <th className="py-3 px-3">Cliente / Contratante</th>
-                  <th className="py-3 px-3 text-center">Vencimento</th>
-                  <th className="py-3 px-3 text-right">Valor Previsto (R$)</th>
-                  <th className="py-3 px-3 text-center">Status</th>
-                  <th className="py-3 px-3 text-center w-28">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/80">
-                {receivables.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-8 text-center text-slate-500">
-                      Nenhuma receita cadastrada para este mês.
-                    </td>
-                  </tr>
-                ) : (
-                  receivables.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
-                      <td className="py-3 px-3 text-center font-mono text-slate-400">
-                        #{item.code}
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-white">
-                        {item.description}
-                      </td>
-                      <td className="py-3 px-3 text-slate-300">
-                        {item.client_name}
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono text-slate-300">
-                        {item.due_date}
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono font-bold text-emerald-400">
-                        {formatCurrency(item.amount)}
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <span className={`px-2 py-0.5 text-[10px] font-semibold rounded border ${
-                          item.status === 'Recebido'
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                        }`}>
-                          {item.status}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <button
-                            onClick={() => handleToggleReceivableStatus(item)}
-                            className={`px-2 py-1 rounded text-[10px] font-semibold transition-all cursor-pointer ${
-                              item.status === 'Recebido'
-                                ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                                : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
-                            }`}
-                          >
-                            {item.status === 'Recebido' ? 'Desfazer' : 'Confirmar'}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteReceivable(item.id, item.description)}
-                            title="Excluir Conta a Receber (DELETE)"
-                            className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
+          {/* VIEW MODE 1: CARD-BASED RESPONSIVO EMPILHADO (OTIMIZADO PARA DISPOSITIVOS MÓVEIS 6,1" A 6,8") */}
+          {receivablesViewMode === 'cards' ? (
+            <div className="p-3.5 sm:p-5 space-y-4">
+              {receivables.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 bg-slate-950/40 rounded-xl border border-slate-800/80">
+                  <TrendingUp className="w-8 h-8 text-slate-600 mx-auto mb-2" />
+                  <p className="text-sm font-medium">Nenhuma receita cadastrada para este mês.</p>
+                  <p className="text-xs text-slate-500 mt-1">Clique em "Nova Conta a Receber" para registrar faturamentos e contratos MSP.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3.5">
+                  {receivables.map((item) => (
+                    <div
+                      key={item.id}
+                      className={`rounded-2xl border p-4 transition-all flex flex-col justify-between ${
+                        item.status === 'Recebido'
+                          ? 'bg-slate-900/90 border-emerald-500/30 hover:border-emerald-500/50 shadow-md shadow-black/20'
+                          : 'bg-slate-900/90 border-slate-800 hover:border-emerald-500/30 shadow-md shadow-black/20'
+                      }`}
+                    >
+                      {/* Top: Código e Status */}
+                      <div>
+                        <div className="flex items-center justify-between gap-2 pb-3 border-b border-slate-800/80">
+                          <span className="font-mono text-emerald-400 font-bold text-xs bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            #{item.code}
+                          </span>
+                          <span className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full border ${
+                            item.status === 'Recebido'
+                              ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                              : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                          }`}>
+                            {item.status}
+                          </span>
                         </div>
-                      </td>
+
+                        {/* Descrição & Dados do Cliente */}
+                        <div className="py-3 space-y-1.5">
+                          <div className="font-bold text-white text-sm sm:text-base tracking-tight">
+                            {item.description}
+                          </div>
+                          <div className="text-xs text-slate-400 flex items-center gap-1.5">
+                            <Building2 className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" />
+                            <span className="text-slate-300 font-medium">{item.client_name}</span>
+                          </div>
+                          <div className="text-xs text-slate-400 flex items-center gap-1.5 pt-1">
+                            <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                            <span>Vencimento Previsto:</span>
+                            <span className="font-mono font-bold text-white">{item.due_date}</span>
+                          </div>
+                        </div>
+
+                        {/* Valor Empilhado */}
+                        <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800/80 flex items-center justify-between text-xs my-2">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                            Valor Previsto
+                          </span>
+                          <span className="font-mono font-black text-base sm:text-lg text-emerald-400">
+                            {formatCurrency(item.amount)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Ações com ergonomia mobile (alvo mínimo de toque 44px) */}
+                      <div className="pt-3 flex items-center justify-between gap-2 border-t border-slate-800/70 mt-2">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleReceivableStatus(item)}
+                          className={`min-h-[44px] px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer flex-1 shadow-sm ${
+                            item.status === 'Recebido'
+                              ? 'bg-slate-800 text-slate-300 hover:bg-slate-750 border border-slate-700'
+                              : 'bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white shadow-emerald-600/30'
+                          }`}
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>{item.status === 'Recebido' ? 'Desfazer' : 'Confirmar Recebimento'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteReceivable(item.id, item.description)}
+                          title="Excluir Conta a Receber (DELETE)"
+                          className="min-h-[44px] min-w-[44px] p-2 text-slate-400 hover:text-rose-400 bg-slate-800/80 hover:bg-rose-950/40 rounded-xl transition-colors flex items-center justify-center cursor-pointer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Resumo Consolidado Mobile de Receitas */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-950 via-slate-900 to-emerald-950/30 border border-emerald-500/30 shadow-lg">
+                <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800 flex-wrap gap-2">
+                  <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-emerald-400" />
+                    Consolidação de Receitas ({monthNames[competenceMonth - 1]}/{competenceYear})
+                  </span>
+                  <span className="text-xs font-mono text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                    {receivables.length} Faturamentos
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase block">Total a Receber</span>
+                    <span className="text-base font-black font-mono text-emerald-400">
+                      {formatCurrency(summary?.totalAccountsReceivable)}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-emerald-300 uppercase block font-semibold">Recebidos</span>
+                    <span className="text-sm font-bold font-mono text-emerald-400">
+                      {receivables.filter(r => r.status === 'Recebido').length} faturamentos
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-amber-300 uppercase block font-semibold">Pendentes</span>
+                    <span className="text-sm font-bold font-mono text-amber-400">
+                      {receivables.filter(r => r.status !== 'Recebido').length} faturamentos
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div>
+              {/* Indicador Visual de Rolagem Horizontal / Touch Indicator */}
+              <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-950 border-b border-slate-800 text-[11px] text-slate-300">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center text-emerald-400 animate-pulse">
+                    <MoveHorizontal className="w-4 h-4" />
+                  </div>
+                  <span>
+                    <strong>Rolagem horizontal nativa ativada:</strong> Deslize lateralmente com o dedo (👈 👉) para visualizar todas as 7 colunas da receita
+                  </span>
+                </div>
+                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 px-2 py-0.5 rounded">
+                  7 Colunas • Toque Habilitado
+                </span>
+              </div>
+
+              {/* Tabela com rolagem horizontal nativa */}
+              <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-emerald-500/30 scroll-smooth touch-pan-x">
+                <table className="min-w-[800px] w-full text-left text-xs">
+                  <thead className="bg-slate-950 text-slate-400 uppercase tracking-wider font-semibold text-[10px] border-b border-slate-800">
+                    <tr>
+                      <th className="py-3 px-3 text-center">Código</th>
+                      <th className="py-3 px-4">Descrição do Faturamento</th>
+                      <th className="py-3 px-3">Cliente / Contratante</th>
+                      <th className="py-3 px-3 text-center">Vencimento</th>
+                      <th className="py-3 px-3 text-right">Valor Previsto (R$)</th>
+                      <th className="py-3 px-3 text-center">Status</th>
+                      <th className="py-3 px-3 text-center w-28">Ações</th>
                     </tr>
-                  ))
-                )}
-              </tbody>
-              <tfoot className="bg-slate-950 font-bold border-t border-slate-800 text-white">
-                <tr>
-                  <td colSpan={4} className="py-3 px-4 text-right uppercase tracking-wider text-xs">
-                    Total a Receber no Mês:
-                  </td>
-                  <td className="py-3 px-3 text-right font-mono text-sm text-emerald-400">
-                    {formatCurrency(summary?.totalAccountsReceivable)}
-                  </td>
-                  <td colSpan={2}></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/80">
+                    {receivables.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-slate-500">
+                          Nenhuma receita cadastrada para este mês.
+                        </td>
+                      </tr>
+                    ) : (
+                      receivables.map((item) => (
+                        <tr key={item.id} className="hover:bg-slate-800/30 transition-colors">
+                          <td className="py-3 px-3 text-center font-mono text-slate-400">
+                            #{item.code}
+                          </td>
+                          <td className="py-3 px-4 font-semibold text-white">
+                            {item.description}
+                          </td>
+                          <td className="py-3 px-3 text-slate-300">
+                            {item.client_name}
+                          </td>
+                          <td className="py-3 px-3 text-center font-mono text-slate-300">
+                            {item.due_date}
+                          </td>
+                          <td className="py-3 px-3 text-right font-mono font-bold text-emerald-400">
+                            {formatCurrency(item.amount)}
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <span className={`px-2 py-0.5 text-[10px] font-semibold rounded border ${
+                              item.status === 'Recebido'
+                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                                : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                            }`}>
+                              {item.status}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                onClick={() => handleToggleReceivableStatus(item)}
+                                className={`px-2 py-1 rounded text-[10px] font-semibold transition-all cursor-pointer ${
+                                  item.status === 'Recebido'
+                                    ? 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                                    : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
+                                }`}
+                              >
+                                {item.status === 'Recebido' ? 'Desfazer' : 'Confirmar'}
+                              </button>
+                              <button
+                                onClick={() => handleDeleteReceivable(item.id, item.description)}
+                                title="Excluir Conta a Receber (DELETE)"
+                                className="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 rounded transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                  <tfoot className="bg-slate-950 font-bold border-t border-slate-800 text-white">
+                    <tr>
+                      <td colSpan={4} className="py-3 px-4 text-right uppercase tracking-wider text-xs">
+                        Total a Receber no Mês:
+                      </td>
+                      <td className="py-3 px-3 text-right font-mono text-sm text-emerald-400">
+                        {formatCurrency(summary?.totalAccountsReceivable)}
+                      </td>
+                      <td colSpan={2}></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

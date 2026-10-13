@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Machine, SystemSettings, ClientCompany, ScheduledMaintenanceRecord } from '../types.ts';
 import { printCalendarReport } from '../utils/printUtils.ts';
+import { StatusBadge } from '../utils/statusUtils.tsx';
+import { StatusManagementModal } from './StatusManagementModal.tsx';
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -36,7 +38,9 @@ import {
   ChevronDown,
   ChevronUp,
   Sparkles,
-  Phone
+  Phone,
+  Palette,
+  Lock
 } from 'lucide-react';
 
 export type EventType = 'warranty_expiry' | 'maintenance' | 'lifecycle_refresh' | 'support_renewal';
@@ -106,6 +110,7 @@ export const MaintenanceCalendar: React.FC<MaintenanceCalendarProps> = ({
   const [maintenanceNotes, setMaintenanceNotes] = useState<string>('');
   const [isSubmittingSchedule, setIsSubmittingSchedule] = useState<boolean>(false);
   const [scheduleFeedback, setScheduleFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [isStatusModalOpen, setIsStatusModalOpen] = useState<boolean>(false);
 
   // Fechar menu de autocompletar ao clicar fora
   useEffect(() => {
@@ -937,6 +942,16 @@ export const MaintenanceCalendar: React.FC<MaintenanceCalendarProps> = ({
               <span>+ Agendar Manutenção</span>
             </button>
 
+            {/* Action Button: Gerenciar Status de Manutenção */}
+            <button
+              onClick={() => setIsStatusModalOpen(true)}
+              title="Cadastrar e gerenciar opções de status de manutenção com cores personalizadas"
+              className="py-1.5 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-lg border border-slate-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
+            >
+              <Palette className="w-3.5 h-3.5 text-amber-400" />
+              <span>Status de Manutenção</span>
+            </button>
+
             {/* Action Button: Imprimir Calendário & Cronograma */}
             <button
               onClick={() => printCalendarReport(
@@ -1632,13 +1647,7 @@ export const MaintenanceCalendar: React.FC<MaintenanceCalendarProps> = ({
                           </div>
 
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <span className={`text-[10px] px-2 py-0.5 rounded font-semibold border ${
-                              eq.status === 'Em Manutenção'
-                                ? 'bg-amber-500/15 text-amber-300 border-amber-500/30'
-                                : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
-                            }`}>
-                              {eq.status || 'Ativo'}
-                            </span>
+                            <StatusBadge status={eq.status || 'Ativo'} size="sm" />
                             <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${
                               isSelected ? 'border-blue-400 bg-blue-500 text-white' : 'border-slate-600'
                             }`}>
@@ -1828,6 +1837,18 @@ export const MaintenanceCalendar: React.FC<MaintenanceCalendarProps> = ({
             </form>
           </div>
         </div>
+      )}
+
+      {/* Modal de Gestão & Cadastro de Status de Manutenção */}
+      {isStatusModalOpen && (
+        <StatusManagementModal
+          isOpen={isStatusModalOpen}
+          onClose={() => setIsStatusModalOpen(false)}
+          onStatusesChanged={() => {
+            onRefreshMachines?.();
+            fetchMaintenances();
+          }}
+        />
       )}
     </div>
   );
